@@ -1,0 +1,2012 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools,mathrsfs}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem*{theoremU}{Theorem U}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\R}{\mathbb R}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\F}{\mathbb F}
+\newcommand{\E}{\mathbb E}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\ind}{\mathbf 1}
+\newcommand{\Tr}{\mathcal T}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\tw}{tw}
+\DeclareMathOperator{\pw}{pw}
+\DeclareMathOperator{\td}{td}
+\DeclareMathOperator{\bw}{bw}
+\DeclareMathOperator{\mmw}{mmw}
+\DeclareMathOperator{\route}{route}
+\DeclareMathOperator{\live}{live}
+\setlength{\emergencystretch}{1.5em}
+\setlist[enumerate]{topsep=4pt,itemsep=3pt}
+
+\title{Consequences of constant-factor hardness for uniform sparsest cut:\\
+treewidth, bicliques, dense subgraphs and small-set expansion}
+\author{Yuwen Zhou\\[2pt] \normalsize University of British Columbia Okanagan\\
+\normalsize\texttt{zhouyw07@student.ubc.ca}}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+A September 2026 preprint of OpenAI proves that Uniform Sparsest Cut is
+NP-hard to approximate within every constant factor. Before its final
+replication step, its proof yields a weighted statement: for every fixed
+\(B\), satisfiable formulas give a cut of bounded capacity whose two sides
+have demand mass bounded away from zero, while unsatisfiable formulas give
+capacity at least \(B\mu(S)(1-\mu(S))\) for every vertex set \(S\). We take
+this statement as an imported theorem, called Theorem~U, and derive
+NP-hardness results from it. Assuming Theorem~U, treewidth, pathwidth,
+treedepth and minimum fill-in are NP-hard to approximate within every
+constant factor on bipartite graphs, and so are a family of layout, width,
+pebbling and balanced-partitioning problems; Maximum Balanced Biclique and
+Maximum Edge Biclique are NP-hard to approximate within \(N^{\gamma}\) for a
+fixed \(\gamma>0\); Densest \(k\)-Subgraph, Densest At-Least-\(k\)-Subgraph
+and Minimum \(k\)-Cut are NP-hard to approximate within a fixed factor
+\(1+\eps_0\); and a gap version of small-set expansion with one fixed
+conductance threshold holds on fixed-degree simple graphs. For most of these
+problems every-constant hardness was previously known only under the
+Small-Set Expansion hypothesis or under stronger running-time assumptions.
+The proofs are transfers: products and symmetric balancing of the capacity
+system, finite-field incidence graphs that turn capacities into simple
+graphs without losing small cuts, the incidence construction of Wu,
+Austrin, Pitassi and Liu, a port-expander degree reduction, and an
+expander-walk product. All results are conditional on the unrefereed
+preprint.
+\end{abstract}
+
+\section{Introduction}
+
+In Uniform Sparsest Cut one is given a graph with nonnegative edge
+capacities \(c\) on \(N\) vertices and seeks a nonempty proper vertex set
+\(S\) minimizing \(c(\partial S)/(|S|(N-|S|))\). The preprint
+\cite{oai26} proves that approximating this problem within any fixed
+factor is NP-hard. The last step of that proof replicates the vertices of a
+weighted capacity system and adds heavy coherence edges. Before that step,
+the proof provides a statement of independent interest, which we isolate as
+Theorem~U in Section~\ref{sec:prelim}: for every fixed \(B\), one can compute
+in polynomial time a capacity system \((V,c,\mu)\) of bounded total capacity
+such that
+\begin{itemize}[topsep=3pt,itemsep=2pt]
+\item for satisfiable formulas, some cut has capacity at most \(21\) and
+both sides have \(\mu\)-mass at least \(1/20000\);
+\item for unsatisfiable formulas, \(c(\partial S)\ge B\mu(S)(1-\mu(S))\) for
+every \(S\subseteq V\).
+\end{itemize}
+The NO inequality is a Poincar\'e-type inequality with an arbitrarily large
+constant, valid at every scale of \(\mu(S)\). Gaps of this shape, obtained
+from the Small-Set Expansion (SSE) hypothesis
+\cite{rs10,rst12}, are the starting point of known reductions for layout,
+width, partitioning, biclique and density problems
+\cite{apw12,wapl14,yam18,bfk14,man18}. This note shows that Theorem~U,
+although weaker than the SSE hypothesis, suffices for a substantial part of
+those consequences.
+
+\paragraph{Status of the results.}
+Every result in this note is conditional on Theorem~U. Theorem~U is read off
+from Theorem~6.1, Proposition~7.1 and Section~8.1 of \cite{oai26}, an
+unrefereed preprint. The hardness proof of \cite{oai26} is not covered by
+the Lean formalization accompanying that release, which concerns a separate
+integrality-gap result \cite{oailean}. We make no claim about the correctness
+of \cite{oai26}. Our contribution consists of the transfers from the
+sparsest-cut gap of Theorem~U to the problems listed in
+Theorem~\ref{th:main}. All reductions are deterministic.
+
+\subsection{Main results}
+
+\begin{theorem}[Main theorem]\label{th:main}
+Assume Theorem~U. Each statement below is witnessed by a deterministic
+polynomial-time reduction from 3SAT; consequently none of the approximation
+tasks below can be performed in polynomial time unless
+\(\mathrm P=\mathrm{NP}\).
+\begin{enumerate}[label=\textup{(\Alph*)}]
+\item \emph{Treewidth family} (Section~\ref{sec:tw}). For every fixed
+\(c>1\) it is NP-hard, on simple bipartite graphs \(H\) with a computable
+scale \(s\), to distinguish \(\td(H)\le s\) from \(\tw(H)>cs\). Hence
+treewidth, pathwidth and treedepth are NP-hard to approximate within every
+constant factor on bipartite graphs, and so are:
+minimum fill-in (number of added edges);
+branch-width and maximum-matching width;
+clique-width, NLC-width, rank-width, Boolean-width, mim-width and
+tree-independence number on line graphs of bipartite graphs;
+cutwidth, minimum linear arrangement, every fixed \(\ell_p\)-norm of the
+prefix cut sizes, carving-width, the vertex-sum layout, interval completion
+(total and added edges), and the four directed layout objectives of
+\cite{wapl14};
+one-shot black pebbling, also on single-sink DAGs of maximum indegree two,
+and one-shot black-white pebbling;
+minimum bisection, balanced edge and vertex separators, min-sum and min-max
+balanced \(k\)-partitioning for each fixed \(k\ge2\) (soundness against
+parts of up to \(\beta N/k\) vertices, for any fixed \(1\le\beta<k\)), and
+cardinality-normalized small-set edge expansion.
+\item \emph{Gap small-set expansion} (Section~\ref{sec:sse}). For every fixed
+rational \(0<\delta\le1/4\) there are a fixed \(\eta=\eta(\delta)<1/2\) and a
+fixed integer \(d\) such that, for each fixed integer \(j\ge1\), it is
+NP-hard, given a simple bipartite \(d\)-regular graph on \(N\) vertices, to
+distinguish between the case that some set of exactly \((\delta/j)N\)
+vertices has conductance at most \(\eta\), and the case that every nonempty
+set of at most \((\delta/j)N\) vertices has conductance at least \(1-\eta\).
+A window version, with an arbitrarily large fixed ratio between the NO and
+YES conductance bounds, is Theorem~\ref{th:window}.
+\item \emph{Bicliques} (Section~\ref{sec:biclique}). There is a fixed
+\(\gamma>0\) such that Maximum Balanced Biclique and Maximum Edge Biclique
+are NP-hard to approximate within \(N^\gamma\) on bipartite graphs with
+\(N\) vertices.
+\item \emph{Dense subgraphs and cuts} (Section~\ref{sec:dense}). There is a
+fixed \(\eps_0>0\) such that Densest \(k\)-Subgraph, Densest
+At-Least-\(k\)-Subgraph and Minimum \(k\)-Cut (with \(k\) part of the input)
+are NP-hard to approximate within \(1+\eps_0\) on simple unweighted graphs.
+For Densest \(k\)-Subgraph this holds on bipartite graphs of fixed degree,
+also when the solution must take \(k/2\) vertices from each shore; for
+Minimum \(k\)-Cut it holds on connected graphs.
+\end{enumerate}
+\end{theorem}
+
+Part~(B) has one fixed threshold \(\eta(\delta)\) close to \(1/2\). The SSE
+hypothesis asks for hardness at every prescribed small \(\eta\), so part~(B)
+does not imply it; see Section~\ref{sec:open}.
+
+\subsection{Related work and priority}
+
+The following summary reflects literature searches through 18 November 2026
+(arXiv, ECCC, DBLP, author pages and proceedings). ``Apparently new'' means
+that we did not locate the precise statement; it is not a claim of
+exhaustive search.
+
+\paragraph{Treewidth family.}
+Every-constant hardness of treewidth, pathwidth, cutwidth, minimum linear
+arrangement, the eight layout objectives, interval completion and one-shot
+pebbling, including the single-sink indegree-two variant, was proved under
+the SSE hypothesis by Austrin, Pitassi and Wu \cite{apw12} and in the journal
+paper of Wu, Austrin, Pitassi and Liu \cite{wapl14}, which also covers
+minimum fill-in (with an extended abstract at IJCAI~2015 \cite{wapl15}). The
+SSE-based results for minimum linear arrangement, balanced separator and
+minimum bisection are due to Raghavendra, Steurer and Tulsiani \cite{rst12},
+and Yamazaki \cite{yam18} transferred SSE-based hardness to carving-,
+branch-, clique-, NLC-, rank- and Boolean-width. Without hypotheses beyond
+\(\mathrm P\ne\mathrm{NP}\), Bonnet proved that treewidth is NP-hard to
+approximate within \(1.00005\) \cite{bon} (first public on 17 June 2024;
+STOC~2025; J.~ACM 2026), Bonnet, Neuen and Soko\l{}owski proved \(1.0003\)
+for treedepth \cite{bns25}, and Cao and Sandeep ruled out a PTAS for minimum
+fill-in \cite{cs17}. Ambühl, Mastrolilli and Svensson \cite{ams11} ruled out
+a PTAS for minimum linear arrangement under a randomized subexponential-time
+assumption. For mim-width, constant-factor obstructions were known under
+\(\mathrm{NP}\ne\mathrm{ZPP}\) \cite{sv16}, and bounded-width gaps were
+proved recently \cite{icalp25,icalp26}; we do not claim the first
+constant-factor inapproximability for mim-width. Tree-independence number is
+known to be hard to approximate within every constant on unrestricted graphs
+\cite{dms21,dfgkm22,zuc07}; our statement is new only on line graphs of
+bipartite graphs. For balanced partitioning see Andreev and R\"acke
+\cite{ar06} and Bansal et al.\ \cite{bfk14}. The joint promise
+``small treedepth versus large treewidth'' appears new; the joint theorem of
+\cite{wapl14} names pathwidth on the YES side. Part~(A) follows the
+incidence construction of \cite{apw12,wapl14}; the new input is the common
+hard family of Theorem~\ref{th:family}, built from Theorem~U. The
+contribution is the every-constant NP-hardness, conditional only on
+Theorem~U.
+
+\paragraph{Small-set expansion.}
+The SSE hypothesis was introduced by Raghavendra and Steurer \cite{rs10};
+reductions between expansion problems are in \cite{rst12}, and Raghavendra
+and Schramm \cite{rsch14} amplify a gap by random walks when the soundness
+is sufficiently larger than the square root of the completeness. The
+fixed-degree gap of Theorem~\ref{th:main}(B) appears new in the stated
+NP-hard form. The window version (Theorem~\ref{th:window}) is partially
+known: \cite[Theorem~3.5 and Corollary~3.6]{rst12} give equal-volume YES
+partitions and a NO expansion profile under the SSE hypothesis; the NP-hard
+counting-measure form with a prescribed exact density appears new. The
+degree reduction in Section~\ref{sec:sse} is related to the zig-zag product
+\cite{rvw02}.
+
+\paragraph{Bicliques.}
+Peeters proved NP-completeness of Maximum Edge Biclique \cite{pee03}. Feige
+\cite{fei02} derived polynomial-factor hardness from average-case hardness
+of refuting random 3SAT, Feige and Kogan \cite{fk04} obtained superconstant
+factors for both biclique objectives under a stronger running-time
+assumption, and Khot \cite{kho06} ruled out a PTAS for Maximum Balanced
+Biclique assuming \(\mathrm{NP}\not\subseteq\bigcap_{\eps>0}
+\mathrm{BPTIME}(2^{n^\eps})\). Ambühl, Mastrolilli and Svensson
+\cite[Theorem~1.4]{ams11} gave a polynomial-factor lower bound for Maximum
+Edge Biclique under a randomized subexponential-time assumption, and
+Bhangale et al.\ \cite{bhangale16} obtained biclique hardness from a
+strengthened Unique Games conjecture. Manurangsi \cite{man17icalp,man18}
+proved, under the SSE hypothesis, a base gap between near-half and
+arbitrarily small bicliques and amplified it to \(n^{1-\eps}\) by
+randomized products. Manurangsi's September 2026 paper \cite{man26} still
+records the absence of even a fixed \(1+\eps\) NP-hardness factor for
+Maximum Balanced Biclique. Deterministic amplification of biclique gaps by
+expander walks on both shores goes back to Goerdt and Lanka
+\cite[Section~4]{gl04}, building on derandomized graph products
+\cite{afwz95}; the two-shore estimate used in Section~\ref{sec:biclique}
+also follows from Ta-Shma and Zadicario \cite[Proposition~22]{tz24}. We do
+not present the amplification as new. The new part is the base gap derived
+from Theorem~U and the resulting deterministic NP-hardness, which appears
+new for both objectives.
+
+\paragraph{Dense subgraphs and cuts.}
+Khot \cite{kho06} ruled out a PTAS for Densest \(k\)-Subgraph under the
+randomized assumption above; Ghoshal and Lee \cite{gl22} treated the
+linear-\(k\) regime under the SSE hypothesis; the best algorithm achieves
+\(n^{1/4+\eps}\) \cite{bccfv10}; Manurangsi \cite{man17} proved
+almost-polynomial hardness under ETH, reformulated under Almost-ETH in an
+October 2026 revision. Laekhanukit, Manurangsi and Trabelsi \cite{lmt26}
+still record the absence of a fixed-factor NP-hardness result. Our result
+for Densest \(k\)-Subgraph appears new as a fixed-factor NP-hardness theorem.
+For Densest At-Least-\(k\)-Subgraph, Bergner (2013 thesis, as attributed in
+\cite{man18}) and Manurangsi \cite{man18} proved \(2-\eps\) hardness under
+the SSE hypothesis; ordinary fixed-factor NP-hardness appears new. For
+Minimum \(k\)-Cut, Saran and Vazirani \cite{sv95} stated fixed
+\(1+\eps\) hardness, citing a private communication of Papadimitriou, and
+Manurangsi \cite{man18} reports that the proof was not published and proves
+\(2-\eps\) hardness under the SSE hypothesis. Our Minimum \(k\)-Cut result is
+therefore an explicit derivation, conditional on Theorem~U, not a first
+result. The transfers in Section~\ref{sec:dense} are fixed-gap versions of
+the SSE-based transfers of \cite{man18}.
+
+\subsection{Techniques and organization}
+
+Section~\ref{sec:prelim} states Theorem~U and three tools: tensorization of
+the NO inequality under products, a symmetric balancing construction that
+turns the single YES cut into a \(K\)-coloring with exactly equal class
+masses, and finite-field incidence matrices whose second singular value is
+at most the square root of their degree.
+
+Section~\ref{sec:tw} builds a common hard family (Theorem~\ref{th:family}):
+an iterated product gives a \(K\)-ary hierarchy of cheap cuts in YES;
+replication with correction edges gives exact vertex counts; incidence
+matrices convert capacities into a simple graph while keeping the NO lower
+bound for cuts of every size. The width, layout, fill-in and pebbling
+consequences then use the incidence construction of \cite{apw12,wapl14}.
+
+Section~\ref{sec:sse} normalizes the balanced system into a positive
+semidefinite reversible chain and reduces its degree by port expanders and
+incidence matrices; the positive semidefinite inequality
+\(\alpha^\top P\beta\le f^\top Pf\) controls sets that meet the two shores
+unequally. Section~\ref{sec:biclique} complements a conflict graph to
+obtain a biclique gap and amplifies it by an expander-walk product.
+Section~\ref{sec:dense} contains elementary transfers from conductance to
+dense subgraphs and cuts. Section~\ref{sec:open} lists open problems.
+
+Sections~\ref{sec:tw}, \ref{sec:sse} and~\ref{sec:biclique} depend only on
+Section~\ref{sec:prelim}; Section~\ref{sec:dense} also uses
+Section~\ref{sec:sse}.
+
+\section{Preliminaries and the hardness input}\label{sec:prelim}
+
+\subsection{Notation and conventions}
+
+All graphs are finite. For a graph \(G\) and \(S\subseteq V(G)\), \(\partial
+S=\partial_GS\) is the set of edges with exactly one endpoint in \(S\), and
+\(e(S)\) is the number of edges with both endpoints in \(S\). If \(G\) is
+\(d\)-regular and \(S\ne\varnothing\), the conductance of \(S\) is
+\(\Phi_G(S)=|\partial S|/(d|S|)\).
+
+A \emph{capacity system} \((V,c,\mu)\) consists of a finite set \(V\), a
+symmetric function \(c:V\times V\to\Q_{\ge0}\) with \(c_{vv}=0\), and a
+probability measure \(\mu\) on \(V\) with rational values. We write
+\[
+c(\partial S)=\sum_{u\in S,\,v\notin S}c_{uv},\qquad
+W(c)=\sum_{\{u,v\}}c_{uv},\qquad d_v=\sum_uc_{uv},
+\]
+the first two sums being over pairs. Numbers are encoded in binary.
+
+A \emph{fixed} quantity is chosen before the input formula and does not
+depend on it. For a minimization problem, NP-hardness of approximation
+within a factor \(C\) means that there is a deterministic polynomial-time
+reduction mapping each 3CNF formula \(\varphi\) to an instance \(I\) and a
+rational \(t>0\) with \(\mathrm{OPT}(I)\le t\) if \(\varphi\) is satisfiable
+(YES) and \(\mathrm{OPT}(I)>Ct\) otherwise (NO); for maximization,
+\(\mathrm{OPT}(I)\ge t\) in YES and \(\mathrm{OPT}(I)<t/C\) in NO. A
+\(C\)-approximation algorithm would then decide 3SAT.
+
+\subsection{Theorem U}
+
+\begin{theoremU}[\cite{oai26}]
+Fix a rational \(B\ge1\) and put \(A_0:=21\) and \(\tau:=1/20000\). There
+are a constant \(W_0=W_0(B)\) and a deterministic polynomial-time reduction
+mapping each 3CNF formula \(\varphi\) to a capacity system \((V,c,\mu)\) with
+\(W(c)\le W_0\) and the following properties.
+\begin{enumerate}[label=\textup{(U\arabic*)}]
+\item If \(\varphi\) is satisfiable, there is \(S\subseteq V\) with
+\(c(\partial S)\le A_0\) and \(\tau\le\mu(S)\le1-\tau\).
+\item If \(\varphi\) is unsatisfiable, every \(S\subseteq V\) satisfies
+\(c(\partial S)\ge B\mu(S)(1-\mu(S))\).
+\end{enumerate}
+\end{theoremU}
+
+\paragraph{Reading Theorem U from \cite{oai26}.}
+We record how Theorem~U follows from \cite{oai26}; all section and equation
+numbers refer to that preprint. Its Theorem~6.1 provides, for each fixed
+\(T_0\ge1\), a demand law \(\mu^{\rm raw}\) on scores and a finite sum \(D\)
+of raw comparison forms of bounded total weight \(W^{\rm raw}(T_0)\), such
+that at a perfect witness \(x\), available when \(\varphi\) is satisfiable,
+the truth cost is at most \(4\) and
+\(\mu^{\rm raw}\{B:B(x)\ge1/4\},\ \mu^{\rm raw}\{B:B(x)\le-1/4\}\ge10^{-4}\);
+and such that, in a NO instance, every measurable binary lookup \(h\) with
+\(\nu=\Var_{\mu^{\rm raw}}(h)>0\) satisfies \(D(h)>T_0\nu\).
+Proposition~7.1 states that the seeds are polynomially enumerable, that the
+numerical data range over a fixed finite family of polynomial patterns, and
+that the total raw comparison mass is bounded by a constant. Section~8.1
+rounds scores entrywise to a fixed grid, with error \(\delta_g\) satisfying
+\(2\delta_gW^{\rm raw}\le1\) and \(\delta_g<1/16\), calls the rounded tables
+keys, and computes in polynomial time (Lemma~8.1) rationals \(c_{ij}\) and
+\(l_i\) with
+\[
+c_{ij}\ge c^0_{ij},\qquad 0\le l_i\le\pi_i,\qquad
+\sum_{i<j}(c_{ij}-c^0_{ij})\le1,\qquad L:=\sum_il_i\ge1-10^{-6},
+\]
+where \(\pi\) is the pushforward of \(\mu^{\rm raw}\) to keys and
+\(c^0_{ij}\) is the raw comparison weight between keys \(i\ne j\). Every
+coloring of the keys extends to a measurable lookup, and
+\(D(h)=\sum_{i<j}c^0_{ij}|h_i-h_j|\) (Equation~(122)).
+
+Apply this with \(T_0=\max\{1,4B\}=4B\), stop at the end of Section~8.1
+(the replication and coherence edges of Section~8.2 are not used), let
+\(V\) be the set of keys, \(c\) the compiled capacities, and
+\(\mu_i=l_i/L\). Then \(W(c)\le W^{\rm raw}+1=:W_0(B)\), and Equation~(125)
+gives \(\mu_i\le2\pi_i\) and \(\mu(E)\ge\pi(E)-10^{-6}\) for every set
+\(E\) of keys.
+
+For (U2), let \(S\subseteq V\). If \(\mu(S)\mu(V\setminus S)=0\) there is
+nothing to prove. Otherwise \(\pi(S)\pi(V\setminus S)\ge\mu(S)\mu(V\setminus
+S)/4>0\), so the lookup \(h=\ind_S\) has positive raw variance and
+\[
+c(\partial S)\ \ge\ \sum_{i<j}c^0_{ij}|h_i-h_j|\ =\ D(h)\ >\ 4B\,\pi(S)\pi(V\setminus S)
+\ \ge\ B\mu(S)(1-\mu(S)).
+\]
+For (U1), after rounding, the keys of the two truth tails have values
+strictly above \(1/8\), respectively strictly below \(-1/8\), and each tail
+retains \(\mu\)-mass at least \(10^{-4}-10^{-6}>\tau\). For each threshold
+\(\theta\in[-1/8,1/8]\), color key \(i\) by \(\ind\{i(x)>\theta\}\); both
+color classes have \(\mu\)-mass at least \(\tau\). For \(\theta\) uniform in
+this interval of length \(1/4\), two values \(u,v\) are separated with
+probability at most \(4|u-v|\). The rounded truth cost is at most \(5\), so
+the expected cut capacity is at most \(4\cdot5\) plus the total excess
+\(1\), that is, at most \(21=A_0\). Some threshold achieves this.
+
+\begin{remark}
+Section~8.1 of \cite{oai26} is written for the value of \(T_0\) fixed in
+Section~8 there; its grid, key enumeration and Lemma~8.1 use only that
+\(T_0\) is fixed, which is how we apply them.
+\end{remark}
+
+\subsection{Products and tensorization}
+
+\begin{definition}
+The \emph{product} of capacity systems \((V_j,c_j,\mu_j)\), \(j\in[s]\), is
+the capacity system on \(V=\prod_jV_j\) with \(\mu=\bigotimes_j\mu_j\), in
+which two points \(x,y\) that differ exactly in coordinate \(j\) have
+capacity \(c_j(x_j,y_j)\prod_{i\ne j}\mu_i(x_i)\), and all other pairs have
+capacity zero.
+\end{definition}
+
+Its total capacity is \(\sum_jW(c_j)\), since the masses of the other
+coordinates sum to one.
+
+\begin{lemma}[Tensorization]\label{lem:tensor}
+If every factor satisfies \(c_j(\partial S)\ge B\mu_j(S)(1-\mu_j(S))\) for all
+\(S\subseteq V_j\), then the product satisfies
+\(c(\partial S)\ge B\mu(S)(1-\mu(S))\) for all \(S\subseteq V\).
+\end{lemma}
+
+\begin{proof}
+Let \(f=\ind_S\). For \(x_{-j}\in\prod_{i\ne j}V_i\) put
+\(S_{x_{-j}}=\{a\in V_j:(a,x_{-j})\in S\}\). Grouping the edges by their
+moving coordinate,
+\[
+c(\partial S)=\sum_j\sum_{x_{-j}}\mu_{-j}(x_{-j})\,c_j(\partial S_{x_{-j}})
+\ge B\sum_j\E\bigl[\Var(f\mid x_{-j})\bigr],
+\]
+since \(\mu_j(S_{x_{-j}})(1-\mu_j(S_{x_{-j}}))=\Var(f\mid x_{-j})\). Let
+\(E_j\) be the averaging operator over coordinate \(j\) in \(L^2(\mu)\). The
+\(E_j\) are commuting orthogonal projections, so \(f=\sum_{T\subseteq[s]}f_T\)
+with \(f_T=\prod_{j\in T}(I-E_j)\prod_{j\notin T}E_jf\) is an orthogonal
+decomposition, and \(\E\Var(f\mid x_{-j})=\|(I-E_j)f\|^2=\sum_{T\ni
+j}\|f_T\|^2\). Summing over \(j\) gives
+\(\sum_T|T|\|f_T\|^2\ge\sum_{T\ne\varnothing}\|f_T\|^2=\Var f=\mu(S)(1-\mu(S))\)
+(this is the Efron--Stein inequality \cite{es81}).
+\end{proof}
+
+\subsection{Balanced colorings}
+
+\begin{lemma}[Balanced colorings]\label{lem:balance}
+Fix an integer \(K\ge2\) and a rational \(B\ge1\), and put
+\(A_K:=A_0\tau^{-K}+1\). There are a constant \(W_1=W_1(K,B)\) and a
+deterministic polynomial-time reduction mapping a 3CNF formula to a capacity
+system \((V,c,\mu)\) together with an explicit action of the symmetric group
+\(\mathfrak S_K\) on \(V\), such that the following hold.
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item \(W(c)\le W_1\); \(c\) and \(\mu\) are invariant under the action; and
+\(\mu(v)\le1/K\) for every \(v\in V\).
+\item In YES there is a map \(\chi:V\to[K]\) with
+\(\chi(\sigma v)=\sigma(\chi(v))\) for all \(\sigma\in\mathfrak S_K\), such
+that the total capacity of pairs \(\{u,v\}\) with \(\chi(u)\ne\chi(v)\) is
+at most \(A_K\). Consequently, for every \(\mathfrak S_K\)-invariant
+\(\nu:V\to\Q_{\ge0}\), each class \(\chi^{-1}(k)\) has \(\nu\)-mass exactly
+\(\nu(V)/K\).
+\item In NO, \(c(\partial S)\ge B\mu(S)(1-\mu(S))\) for all \(S\subseteq V\).
+\end{enumerate}
+\end{lemma}
+
+The constant \(A_K\) depends on \(K\) only, not on \(B\).
+
+\begin{proof}
+Let \((V_0,c_0,\mu_0)\) be the output of Theorem~U for this \(B\). Put
+\(s_0=K\tau^K\) and fix \(t\) with \(B(1-s_0)^t\le1\); this choice uses only
+the known bound \(s_0\), not a YES witness. Let \(F\) be the system on \([K]\)
+with uniform measure and capacity \(B/K^2\) on every pair of distinct
+symbols; for \(S\subseteq[K]\) it satisfies
+\(c_F(\partial S)=|S|(K-|S|)B/K^2=B\mu_F(S)(1-\mu_F(S))\). Let \((V,c,\mu)\)
+be the product of \(tK\) copies of \((V_0,c_0,\mu_0)\), indexed by
+\((j,r)\in[t]\times[K]\) (block \(j\), position \(r\)), and one copy of
+\(F\) (the fallback coordinate). The group \(\mathfrak S_K\) acts by
+permuting the positions inside every block simultaneously and permuting the
+fallback symbol by the same permutation; this preserves \(c\) and \(\mu\).
+Item~(iii) follows from (U2) and Lemma~\ref{lem:tensor}. The total capacity
+is \(tKW_0+B(K-1)/(2K)\le tKW_0+B=:W_1\), and the fallback coordinate gives
+\(\mu(v)\le1/K\).
+
+In YES let \(S_0\) be the set of (U1) and \(p=\mu_0(S_0)\in[\tau,1-\tau]\).
+Call block \(j\) of \(x\in V\) \emph{successful} if exactly one position
+\(r\) has \(x_{j,r}\in S_0\). Let \(\chi(x)\) be the \emph{position of the
+unique coordinate in \(S_0\) inside the first successful block}, and let
+\(\chi(x)\) be the fallback symbol if no block succeeds. Permuting positions
+by \(\sigma\) preserves which blocks succeed and moves the distinguished
+position by \(\sigma\), so \(\chi(\sigma x)=\sigma(\chi(x))\). As
+\(\mathfrak S_K\) acts transitively on \([K]\) and \(\nu\) is invariant,
+\(\nu(\chi^{-1}(\sigma k))=\nu(\sigma\chi^{-1}(k))=\nu(\chi^{-1}(k))\).
+
+A block succeeds with probability \(s=Kp(1-p)^{K-1}\ge K\tau^K=s_0\). An
+edge that changes coordinate \((j,r)\) can change \(\chi\) only if all
+blocks before \(j\) fail and the two values of coordinate \((j,r)\) are
+separated by \(S_0\). The event that the earlier blocks fail depends on the
+other coordinates and has probability \((1-s)^{j-1}\), so these edges have
+total capacity at most \(A_0(1-s)^{j-1}\) for each \((j,r)\). Edges changing
+the fallback coordinate change \(\chi\) only if all \(t\) blocks fail. The
+total capacity of pairs with different colors is therefore at most
+\[
+KA_0\sum_{j=1}^t(1-s)^{j-1}+\tfrac B2(1-s)^t\ \le\ \frac{KA_0}{s}+B(1-s_0)^t
+\ \le\ A_0\tau^{-K}+1=A_K.\qedhere
+\]
+\end{proof}
+
+\subsection{Finite-field incidence matrices}
+
+Let \(q\) be a prime and \(\Omega=\F_q^2\). For \(t\in\F_q\) let
+\(A_t\in\{0,1\}^{\Omega\times\Omega}\) be given by
+\(A_t[(x,y),(u,v)]=1\) if and only if \(y+v-xu=t\), and for
+\(T\subseteq\F_q\) put \(A_T=\sum_{t\in T}A_t\).
+
+\begin{lemma}\label{lem:incidence}
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item \(A_T\) is a symmetric \(0/1\) matrix with all row sums \(q|T|\);
+different \(t\) give disjoint supports.
+\item For every \(g\perp\ind\), \(\|A_tg\|\le\sqrt q\,\|g\|\) and
+\(\|A_Tg\|\le|T|\sqrt q\,\|g\|\).
+\item For \(S_1,S_2\subseteq\Omega\) of densities \(s_1,s_2\),
+\[
+\bigl|\ind_{S_1}^{\top}A_T\ind_{S_2}-q^3|T|s_1s_2\bigr|
+\le|T|\,q^{5/2}\sqrt{s_1(1-s_1)s_2(1-s_2)}.
+\]
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(i) The defining relation is symmetric in \(((x,y),(u,v))\); for fixed
+\((x,y)\) and \(t\), the solutions are \(v=t-y+xu\), \(u\in\F_q\). Each
+pair of points has a single value \(y+v-xu\).
+(ii) The entry of \(A_tA_t^{\top}\) at \(((x,y),(x',y'))\) counts \((u,v)\)
+with \(y+v-xu=t=y'+v-x'u\), that is \(y-y'=(x-x')u\). It is \(q\) on the
+diagonal, \(0\) if \(x=x'\) and \(y\ne y'\), and \(1\) if \(x\ne x'\). Hence
+\(A_tA_t^{\top}=qI+J-\bigoplus_xJ_q\), where \(J\) is the all-ones matrix
+and \(\bigoplus_xJ_q\) the block matrix of all-ones blocks on the classes
+of equal first coordinate. For \(g\perp\ind\) we get
+\(\|A_t^{\top}g\|^2=q\|g\|^2-g^{\top}(\bigoplus_xJ_q)g\le q\|g\|^2\), and
+\(A_t^{\top}=A_t\). The second bound follows by the triangle inequality.
+(iii) Write \(\ind_{S_i}=s_i\ind+f_i\) with \(f_i\perp\ind\) and
+\(\|f_i\|^2=q^2s_i(1-s_i)\). Since \(A_T\ind=q|T|\ind\), the cross terms
+vanish and \(\ind^{\top}A_T\ind=q^3|T|\); the remaining term \(f_1^{\top}
+A_Tf_2\) is bounded by (ii).
+\end{proof}
+
+We use \(A_T\) in two ways: as the biadjacency matrix between two disjoint
+copies of \(\Omega\) (a simple bipartite graph), and, with its diagonal
+removed, as the adjacency matrix of a simple graph on \(\Omega\). In the
+second case the number of edges between \(S\) and \(\Omega\setminus S\) is
+\(\ind_S^{\top}A_T\ind_{\Omega\setminus S}\), which the diagonal does not
+affect. A prime in \([Q,2Q]\) exists by Bertrand's postulate and is found by
+trial division in time polynomial in \(Q\).
+
+\section{The treewidth family}\label{sec:tw}
+
+\subsection{A common hard family}
+
+Let \(\Tr=\Tr_{K,\ell}\) be the complete rooted \(K\)-ary tree of depth
+\(\ell\), whose nodes are the words over \([K]\) of length at most \(\ell\)
+and whose leaves are the words of length \(\ell\). For leaves \(a,b\), let
+\(\route(a,b)\) be the set of nodes on the tree path from \(a\) to \(b\)
+(so \(\route(a,a)=\{a\}\)).
+
+\begin{theorem}[Common hard family]\label{th:family}
+Fix an integer \(K\ge2\), a rational \(B\ge1\) and an integer \(n_1\). There
+are a constant \(C_K\) depending only on \(K\), a constant
+\(C'=C'(K,B)\), and a deterministic polynomial-time reduction mapping a
+3CNF formula to a simple graph \(G\) on \(N\ge n_1\) vertices, a rational
+\(\Lambda\ge N\) and an integer \(\ell\ge1\), with \(|E(G)|\le C'\Lambda\),
+such that the following hold.
+\begin{enumerate}[label=\textup{(Y\arabic*)}]
+\item In YES, there is an ordering of \(V(G)\) every initial segment \(I\)
+of which has \(|\partial I|\le C_K\Lambda\), and a partition of \(V(G)\)
+into \(K\) classes of exactly \(N/K\) vertices with at most \(C_K\Lambda\)
+edges joining different classes.
+\item In YES, there is a map \(\lambda\) from \(V(G)\) to the leaves of
+\(\Tr_{K,\ell}\) such that the loads
+\(L_x=|\{uv\in E(G):x\in\route(\lambda(u),\lambda(v))\}|\) satisfy
+\[
+\max_{P}\sum_{x\in P}L_x\le C_K\Lambda,\qquad\sum_xL_x^2\le C_K\Lambda^2,
+\]
+the maximum being over root--leaf paths \(P\).
+\end{enumerate}
+\begin{enumerate}[label=\textup{(N)}]
+\item In NO, every \(S\subseteq V(G)\) satisfies
+\(|\partial S|\ge B\Lambda z(1-z)\), where \(z=|S|/N\).
+\end{enumerate}
+\end{theorem}
+
+\subsection{Proof of Theorem~\ref{th:family}}
+
+\paragraph{Step 1: balanced factor.}
+Apply Lemma~\ref{lem:balance} with \(K\) and \(B\) and write
+\((V_1,c_1,\mu_1)\), \(W_1\), \(\chi\) for its output.
+
+\paragraph{Step 2: hierarchy.}
+Fix \(\ell\ge1\) such that, with \(W:=\ell W_1\),
+\begin{equation}\label{eq:ell}
+WK^{-(\ell-1)}\le1,\qquad W^2K^{2-\ell}\le1,\qquad
+\frac{B}{2K^\ell}\le\frac1{4(\ell+1)};
+\end{equation}
+this is possible since \(W\) grows linearly in \(\ell\). Let
+\((V_2,c_2,\mu_2)\) be the product of \(\ell\) copies of
+\((V_1,c_1,\mu_1)\). By Lemma~\ref{lem:tensor} it satisfies the NO
+inequality, \(W(c_2)=W\), and every atom of \(\mu_2\) has mass at most
+\(K^{-\ell}\). In YES put \(\lambda(v)=(\chi(v_1),\dots,\chi(v_\ell))\), a
+leaf of \(\Tr\). By independence, for a word \(p\) of length \(j\) the set of
+\(v\) with \(\lambda(v)\) beginning with \(p\) has \(\mu_2\)-mass exactly
+\(K^{-j}\).
+
+An edge of \(c_2\) changes one coordinate \(i\); it changes at most the
+label \(\lambda_i\). We use the following count: \emph{the capacity of edges
+that change coordinate \(i\) and the label \(\lambda_i\), and whose
+endpoints have prescribed labels in \(j'\) other coordinates, is at most
+\(A_KK^{-j'}\)}, because the label-changing capacity in one factor is at most
+\(A_K\) and the prescribed labels of the other coordinates have probability
+\(K^{-j'}\). Likewise edges that change coordinate \(i\) but not
+\(\lambda_i\), with all other \(\ell-1\) labels prescribed, have capacity
+at most \(W_1K^{-(\ell-1)}\); summing over \(i\), the capacity of edges with
+both endpoints in one leaf is at most \(WK^{-(\ell-1)}\le1\).
+
+\begin{claim}\label{cl:weighted}
+In YES:
+\begin{enumerate}[label=\textup{(\alph*)}]
+\item the partition of \(V_2\) by \(\lambda_1\) has classes of
+\(\mu_2\)-mass \(1/K\) and crossing capacity at most \(A_K\);
+\item for every ordering of \(V_2\) that is lexicographic in \(\lambda\)
+(ties arbitrary), every initial segment has capacity at most \(2A_K+1\);
+\item the loads \(L^{(2)}_x=\sum c_2(u,v)\), over pairs with
+\(x\in\route(\lambda(u),\lambda(v))\), satisfy for a node \(x\) of depth
+\(j\)
+\[
+L^{(2)}_x\le(Kj+1)A_KK^{-j}+\ind_{\{j=\ell\}}WK^{-(\ell-1)} .
+\]
+Consequently \(\sum_{x\in P}L^{(2)}_x\le P_K:=A_K\sum_{j\ge0}(Kj+1)K^{-j}+1\)
+for every root--leaf path \(P\), and \(\sum_x(L^{(2)}_x)^2\le
+Q_K:=2A_K^2\sum_{j\ge0}(Kj+1)^2K^{-j}+2\).
+\end{enumerate}
+\end{claim}
+
+\begin{proof}
+(a) is the case \(j'=0\), \(i=1\) of the count. (b) Let \(I\) be an initial
+segment and \(w\) the label of the first vertex outside \(I\). An edge
+\(\{u,v\}\) crossing \(I\) with \(\lambda(u)\ne\lambda(v)\) changes exactly
+one label \(i\), so \(\lambda(u),\lambda(v)\) share a prefix \(p\) of length
+\(i-1\). If \(p\) differs from the first \(i-1\) letters of \(w\), the whole
+subtree of \(p\) lies on one side of \(I\); so \(p=w_{<i}\), and these edges
+have capacity at most \(A_KK^{-(i-1)}\). Edges with
+\(\lambda(u)=\lambda(v)\) can cross only inside the leaf \(w\), with capacity
+at most \(1\). Summing, the cut is at most \(A_K\sum_{i\ge1}K^{-(i-1)}+1\le
+2A_K+1\).
+(c) Let \(x\) have depth \(j\) and word \(p\). A route through \(x\) either
+has its splitting node at \(x\), or has exactly one endpoint in the subtree
+of \(x\), or (if \(j=\ell\)) lies inside the leaf \(x\). Edges splitting at
+\(x\) change label \(j+1\) and have prescribed labels \(p\) in \(j\) other
+coordinates: capacity at most \(A_KK^{-j}\). An edge entering the subtree
+from outside changes one label \(i\le j\), and its inner endpoint has the
+labels of \(p\) in the other \(j-1\) of the first \(j\) coordinates:
+capacity at most \(A_KK^{-(j-1)}\) for each \(i\), in total
+\(KjA_KK^{-j}\). Leaf-internal edges contribute at most \(WK^{-(\ell-1)}\).
+Summing along a path gives \(P_K\) since \(WK^{-(\ell-1)}\le1\). There are
+\(K^j\) nodes at depth \(j\), so
+\(\sum_x(L^{(2)}_x)^2\le\sum_jK^j\cdot2(Kj+1)^2A_K^2K^{-2j}+2K^\ell W^2
+K^{-2(\ell-1)}\le Q_K\), using \(W^2K^{2-\ell}\le1\).
+\end{proof}
+
+\paragraph{Step 3: exact vertex counts.}
+Put \(\eta=1/(\ell+1)\) and let \(h=|V_2|\). For an integer \(J\ge1\) let
+\(n_v=K\max\{1,\lceil J\mu_2(v)\rceil\}\) for \(v\in V_2\), replace \(v\) by
+a cloud of \(n_v\) copies, and let \(V_3\) be the union of the clouds,
+\(n'=|V_3|\), \(\rho\) the uniform measure on \(V_3\), \(\nu(a)=\mu_2(v)/n_v\)
+for \(a\) in the cloud of \(v\), and \(\omega=KJ/n'\). Then
+\(KJ\le n'\le K(J+h)\), \(K\mid n'\), \(1-\omega\le h/J\), and
+\(\rho\ge\omega\nu\) pointwise. Define capacities on \(V_3\):
+\begin{align*}
+c^{\rm inh}(a,b)&=c_2(v,w)/(n_vn_w)&&\text{for \(a,b\) in the clouds of \(v\ne w\)};\\
+c^{\rm cl}(a,b)&=B\nu(a)\nu(b)&&\text{for distinct \(a,b\) in the same cloud};\\
+c^{\rm cor}(a,b)&=B\bigl(\rho(a)\rho(b)-\omega^2\nu(a)\nu(b)\bigr)\ \ge0
+&&\text{for all distinct \(a,b\)};
+\end{align*}
+and \(c_3=c^{\rm inh}+c^{\rm ext}\) with \(c^{\rm ext}=c^{\rm cl}+c^{\rm cor}\).
+
+\begin{claim}\label{cl:counts}
+\begin{enumerate}[label=\textup{(\alph*)}]
+\item In NO, \(c_3(\partial S)\ge B\rho(S)(1-\rho(S))\) for every
+\(S\subseteq V_3\).
+\item \(W(c^{\rm ext})\le B/(2K^\ell)+B(1-\omega^2)/2\).
+\item Suppose \(J\) is so large that \(B(1-\omega^2)/2\le\eta/4\) and
+\(2K(1-\omega)(W+1)\le1\). In YES there is a partition of \(V_3\) into \(K\)
+classes of exactly \(n'/K\) elements whose crossing \(c_3\)-capacity is at
+most \(A_K+2\).
+\end{enumerate}
+\end{claim}
+
+\begin{proof}
+(a) Let \(a_v\) be the fraction of the cloud of \(v\) lying in \(S\). Let
+\(R\subseteq V_2\) contain each \(v\) independently with probability
+\(a_v\). Since capacities are spread uniformly over pairs of clouds,
+\[
+c^{\rm inh}(\partial S)=\sum_{\{v,w\}}c_2(v,w)\bigl[a_v(1-a_w)+a_w(1-a_v)\bigr]
+=\E\,c_2(\partial R)\ge B\,\E\bigl[\mu_2(R)(1-\mu_2(R))\bigr].
+\]
+With \(z_\nu=\sum_v\mu_2(v)a_v=\nu(S)\), the last expectation equals
+\(z_\nu(1-z_\nu)-\sum_v\mu_2(v)^2a_v(1-a_v)\). The cloud edges contribute
+\(c^{\rm cl}(\partial S)=\sum_vB(\mu_2(v)/n_v)^2(a_vn_v)((1-a_v)n_v)
+=B\sum_v\mu_2(v)^2a_v(1-a_v)\). Hence
+\((c^{\rm inh}+c^{\rm cl})(\partial S)\ge B\nu(S)\nu(V_3\setminus S)
+=B\sum_{a\in S,b\notin S}\nu(a)\nu(b)\ge B\omega^2\sum_{a\in S,b\notin
+S}\nu(a)\nu(b)\), and adding \(c^{\rm cor}(\partial S)\) gives at least
+\(B\sum_{a\in S,b\notin S}\rho(a)\rho(b)=B\rho(S)(1-\rho(S))\).
+
+(b) \(W(c^{\rm cl})\le\frac B2\sum_v\mu_2(v)^2\le\frac B2\max_v\mu_2(v)\le
+B/(2K^\ell)\). Next,
+\(W(c^{\rm cor})=\frac B2\bigl[(1-\sum\rho^2)-\omega^2(1-\sum\nu^2)\bigr]\),
+and \(\omega^2\sum_a\nu(a)^2\le\sum_a\rho(a)^2\) since \(\omega\nu\le\rho\);
+so \(W(c^{\rm cor})\le B(1-\omega^2)/2\).
+
+(c) Consider the classes \(\Gamma_k=\bigcup\{\text{cloud of }v:\chi(v_1)=k\}\).
+Since \(n_v\ge KJ\mu_2(v)\) and the \(\lambda_1\)-classes have
+\(\mu_2\)-mass \(1/K\), each \(|\Gamma_k|\ge J=\omega n'/K\). Thus the total
+excess \(\sum_k(|\Gamma_k|-n'/K)_+\), which equals the total deficit, is at
+most \((1-\omega)n'\). By (b), \eqref{eq:ell} and the choice of \(J\),
+\(W(c^{\rm ext})\le\eta/2\le1\), so the \(c_3\)-degrees sum to at most
+\(2(W+1)\). From each oversize class move its surplus vertices of smallest
+\(c_3\)-degree to deficient classes. An oversize class has at least \(n'/K\)
+members, so its \(m\) smallest degrees sum to at most \(2m(W+1)K/n'\); the
+moves increase the crossing capacity by at most \(2K(1-\omega)(W+1)\le1\).
+Before the moves, the crossing capacity is at most \(A_K\) (inherited part,
+Claim~\ref{cl:weighted}(a)) plus \(\eta/2\).
+\end{proof}
+
+In YES give each element of the cloud of \(v\) the leaf \(\lambda(v)\). For
+every node \(x\), the \(c^{\rm inh}\)-load equals \(L^{(2)}_x\). Order
+\(V_3\) lexicographically by label, with each cloud contiguous. An initial
+segment splits at most one cloud, and its \(c^{\rm inh}\)-capacity is
+linear in the fraction of that cloud; hence it is at most the larger of the
+two adjacent whole-cloud segments, which are initial segments of a
+lexicographic order of \(V_2\), so at most \(2A_K+1\) by
+Claim~\ref{cl:weighted}(b).
+
+Choose \(J\), polynomial in the input, so large that the hypotheses of
+Claim~\ref{cl:counts}(c) hold and \(B/n'\le\eta/8\); this is possible since
+\(1-\omega\le h/J\) and \(n'\ge KJ\). Then
+\(W(c^{\rm ext})\le\eta/4+\eta/4=\eta/2\) by \eqref{eq:ell}.
+
+\paragraph{Step 4: a simple graph.}
+Let \(U\) be an integer with \(U>W+1\ge W(c_3)\ge\max c_3\). Choose a prime
+\(q\ge16\), polynomial in \(n'\), such that
+\[
+q^2\ge Un',\qquad n'q^2\ge n_1,\qquad
+\frac2U\Bigl(\frac{B}{(n')^2}+\frac{Un'}{\sqrt q}\Bigr)+\frac1q\le1,\qquad
+\frac{U(n')^2}{\sqrt q}+\frac{Un'}{2q}+\frac{U(n')^2}{2q}\le\frac\eta4 .
+\]
+Put \(M=q^2\) and \(\Lambda=M^2/U\). The graph \(G\) has vertex set
+\(V_3\times\F_q^2\), with clouds \(C_a=\{a\}\times\F_q^2\) and \(N=n'q^2\).
+For distinct \(a,b\in V_3\) choose \(T_{ab}\subseteq\F_q\) with
+\(|T_{ab}|=\lceil qc_3(a,b)/U\rceil\le q\) and join \(C_a\) to \(C_b\) by
+\(A_{T_{ab}}\). Inside each \(C_a\) take \(A_{T_a}\) without its diagonal,
+where \(|T_a|=\bigl\lceil q\cdot\frac2U\bigl(\frac{B}{(n')^2}+\frac{Un'}{\sqrt
+q}\bigr)\bigr\rceil\le q\). By Lemma~\ref{lem:incidence}(i), \(G\) is simple,
+and \(\Lambda\ge N\) because \(q^2\ge Un'\).
+
+\emph{NO.} Let \(S\subseteq V(G)\), let \(a_w\) be the density of \(S\) in
+\(C_w\), \(u_w=\sqrt{a_w(1-a_w)}\) and \(z=|S|/N=\frac1{n'}\sum_wa_w\). For a
+pair \(\{w,w'\}\) the crossing edges are
+\(\ind_{S_w}^{\top}A\ind_{C_{w'}\setminus S_{w'}}+\ind_{C_w\setminus
+S_w}^{\top}A\ind_{S_{w'}}\) with \(A=A_{T_{ww'}}\). By
+Lemma~\ref{lem:incidence}(iii), \(qc_3(w,w')/U\le|T_{ww'}|\le q\) and
+\(\Lambda=q^4/U\), this is at least
+\(\Lambda\bigl(c_3(w,w')[a_w(1-a_{w'})+a_{w'}(1-a_w)]-\frac{2U}{\sqrt q}u_wu_{w'}\bigr)\).
+Summing over pairs and using \(\sum_{w<w'}u_wu_{w'}\le\frac{n'}2\sum_wu_w^2\),
+the intercloud edges number at least
+\[
+\Lambda\Bigl(\E\,c_3(\partial R)-\frac{Un'}{\sqrt q}\sum_wu_w^2\Bigr)
+\ \ge\ \Lambda\Bigl(Bz(1-z)-\Bigl(\frac{B}{(n')^2}+\frac{Un'}{\sqrt q}\Bigr)\sum_wu_w^2\Bigr),
+\]
+where \(R\subseteq V_3\) contains \(w\) independently with probability
+\(a_w\), and we used Claim~\ref{cl:counts}(a) and
+\(\E[\rho(R)(1-\rho(R))]=z(1-z)-\sum_wu_w^2/(n')^2\). Inside \(C_w\),
+Lemma~\ref{lem:incidence}(iii) gives at least
+\(q^3|T_w|u_w^2(1-q^{-1/2})\ge\Lambda\,U\frac{|T_w|}{q}\cdot\frac12u_w^2
+\ge\Lambda\bigl(\frac{B}{(n')^2}+\frac{Un'}{\sqrt q}\bigr)u_w^2\) crossing
+edges. Adding, \(|\partial S|\ge B\Lambda z(1-z)\).
+
+\emph{Edge counts.} Between \(C_a\) and \(C_b\) there are
+\(q^3|T_{ab}|=\Lambda U|T_{ab}|/q\in[\Lambda c_3(a,b),\Lambda(c_3(a,b)+U/q)]\)
+edges, and inside \(C_a\) at most \(q^3|T_a|/2\le\Lambda\bigl(\frac B{(n')^2}
++\frac{Un'}{\sqrt q}+\frac U{2q}\bigr)\). Call \emph{extra} all edges beyond
+the \(\Lambda c^{\rm inh}\) prescribed by the inherited capacities: their
+number divided by \(\Lambda\) is at most
+\(W(c^{\rm ext})+\frac{U(n')^2}{2q}+\frac B{n'}+\frac{U(n')^2}{\sqrt q}
++\frac{Un'}{2q}\le\frac\eta2+\frac\eta8+\frac\eta4\le\eta\). In particular
+\(|E(G)|\le(W+2)\Lambda=:C'\Lambda\).
+
+\emph{YES partition.} Lifting the partition of Claim~\ref{cl:counts}(c) by
+whole clouds gives \(K\) classes of exactly \(N/K\) vertices with at most
+\(\Lambda(A_K+2+\eta)\le\Lambda(A_K+3)\) crossing edges.
+
+\emph{YES order.} List the clouds in the order of \(V_3\) chosen in Step~3,
+each cloud in any internal order. An initial segment \(I\) consists of the
+whole clouds of an initial segment \(I_3\) of \(V_3\) and part of one cloud
+\(C_{a^*}\). Only one cloud is split, so the vectors \(f_w\) of
+Lemma~\ref{lem:incidence}(iii) vanish for all other clouds and the
+intercloud term has no discrepancy: the intercloud crossing edges number
+\(\Lambda\sum_{w<w'}(U|T_{ww'}|/q)[a_w(1-a_{w'})+a_{w'}(1-a_w)]\), which is
+linear in \(a_{a^*}\) and hence at most its value at \(a_{a^*}\in\{0,1\}\).
+That value is at most \(\Lambda\) times the \(c^{\rm inh}\)-capacity of an
+initial segment of \(V_3\) plus the extra edges, so \(|\partial I|\le
+\Lambda(2A_K+1+\eta)\le\Lambda(2A_K+2)\).
+
+\emph{YES routes.} Give each vertex of \(C_a\) the leaf of \(a\). Then
+\(L_x\le\Lambda(L^{(2)}_x+e_x)\), where \(e_x\) is the load of the extra
+edges, divided by \(\Lambda\). Extra edges have total scaled count at most
+\(\eta\), and each route meets at most two nodes of each depth, so the
+nodes of one depth carry total extra load at most \(2\eta\). Along a path,
+\(\sum_{x\in P}e_x\le(\ell+1)\eta=1\), and
+\(\sum_xe_x^2\le(\ell+1)(2\eta)^2\le4\). Therefore
+\(\sum_{x\in P}L_x\le\Lambda(P_K+1)\) and
+\(\sum_xL_x^2\le\Lambda^2(2Q_K+8)\).
+
+Taking \(C_K=\max\{2A_K+3,\,P_K+1,\,2Q_K+8\}\), which depends only on \(K\),
+proves the theorem. All steps are polynomial for fixed \(K,B,n_1\). \qed
+
+\subsection{Edge cuts, layouts and partitioning}\label{sec:edge}
+
+Throughout, \(G,\Lambda,N\) come from Theorem~\ref{th:family}; \(B\) is
+taken large after \(K\) and the target factor are fixed.
+
+\begin{corollary}\label{cor:edge}
+Assume Theorem~U. For every fixed \(C\ge1\) the following problems are
+NP-hard to approximate within \(C\):
+\begin{enumerate}[label=\textup{(\alph*)}]
+\item minimum bisection; for fixed \(0<\alpha\le1/2\), the minimum of
+\(|\partial S|\) over \(\alpha N\le|S|\le(1-\alpha)N\); for fixed
+\(1/2<\theta<1\), the minimum number of edges whose deletion leaves only
+components of at most \(\theta N\) vertices;
+\item cutwidth; minimum linear arrangement; every fixed \(\ell_p\)-norm
+\((1\le p\le\infty)\) of the vector of prefix cut sizes of an ordering;
+carving-width;
+\item for fixed \(k\ge2\) and \(1\le\beta<k\), min-sum and min-max
+balanced \(k\)-partitioning, where YES has a partition into parts of exactly
+\(N/k\) vertices and NO bounds every partition into \(k\) parts of at most
+\(\beta N/k\) vertices;
+\item for fixed rational \(0<\delta<1\) and fixed \(\gamma\) with
+\(\gamma\delta<1\), the minimum of \(|\partial S|/|S|\): YES has a set of
+exactly \(\delta N\) vertices with \(|\partial S|/|S|\le C_K\Lambda/(\delta
+N)\), and NO has \(|\partial S|/|S|\ge B(1-\gamma\delta)\Lambda/N\) for
+every nonempty \(S\) with \(|S|\le\gamma\delta N\).
+\end{enumerate}
+\end{corollary}
+
+\begin{proof}
+(a) Take \(K\) even. The union of \(K/2\) classes of (Y1) is a bisection
+with at most \(C_K\Lambda\) crossing edges. In NO, every \(S\) with
+\(\alpha\le|S|/N\le1-\alpha\) has \(|\partial S|\ge B\alpha(1-\alpha)\Lambda\).
+For the component version, the YES bisection's edges leave components of at
+most \(N/2\le\theta N\) vertices. In NO, let \(F\) be such an edge set and
+\(a=(1-\theta)/2\). If a component has at least \(aN\) vertices, take it as
+\(S\); its complement has at least \((1-\theta)N\ge aN\) vertices. Otherwise
+accumulate components until their total first reaches \(aN\); the total is
+below \(2aN=(1-\theta)N\), so the complement exceeds \(\theta N\ge aN\).
+Every edge of \(\partial S\) joins different components, so lies in \(F\),
+and \(|F|\ge B\Lambda a(1-a)\).
+
+(b) The YES order of (Y1) has every prefix cut at most \(C_K\Lambda\), so
+cutwidth at most \(C_K\Lambda\), minimum linear arrangement (the sum of the
+prefix cuts) at most \(NC_K\Lambda\), and \(\ell_p\)-norm at most
+\(N^{1/p}C_K\Lambda\). In NO, every ordering has at least \(N/2-1\) prefixes
+of size in \([N/4,3N/4]\), each with cut at least \(3B\Lambda/16\); this
+gives the lower bounds \(3B\Lambda/16\), \((N/2-1)3B\Lambda/16\) and
+\((N/2-1)^{1/p}3B\Lambda/16\). For carving-width (decompositions by
+subcubic trees whose leaves are the vertices), every such tree has an edge
+whose two sides contain at least \((N-1)/3\) vertices each: at a node \(c\)
+all of whose branches contain at most \(N/2\) leaves, the at most three
+branches contain at least \(N-1\) leaves, and the largest branch gives the
+edge. So the NO carving-width is at least \(B\Lambda z(1-z)\) with
+\(z\in[(N-1)/(3N),1/2]\). In YES use a caterpillar along the YES order: its
+nonsingleton cuts are prefix cuts, and a singleton cut \(\{v\}\) costs
+\(\deg v\le|\partial I^-|+|\partial I^+|\le2C_K\Lambda\), where \(I^-\) and
+\(I^+\) are the prefixes ending just before and at \(v\).
+
+(c) Take \(K\) divisible by \(k\) and group the YES classes into \(k\) parts
+of \(N/k\) vertices; each part has boundary at most \(C_K\Lambda\), so the
+sum of boundaries is at most \(kC_K\Lambda\). In NO let \(z_1,\dots,z_k\le
+\beta/k\) be the part masses; then
+\(\sum_i|\partial S_i|\ge B\Lambda\sum_iz_i(1-z_i)\ge B\Lambda(1-\beta/k)\),
+and the maximum is at least \(1/k\) of the sum.
+
+(d) Take \(K\) divisible by the denominator of \(\delta\); the union of
+\(K\delta\) YES classes has exactly \(\delta N\) vertices and boundary at
+most \(C_K\Lambda\). In NO, \(|\partial S|\ge B\Lambda z(1-z)\ge
+B\Lambda z(1-\gamma\delta)\) for \(z\le\gamma\delta\).
+
+In each case the ratio between the NO lower bound and the YES upper bound
+is a fixed positive multiple of \(B/C_K\) (asymptotically in \(N\), which
+Theorem~\ref{th:family} lets us take large), so a large fixed \(B\) gives
+factor \(C\).
+\end{proof}
+
+\subsection{Vertex separators, width parameters and fill-in}\label{sec:vertex}
+
+\paragraph{The incidence graph.}
+Following \cite{apw12,wapl14}, for a graph \(G\) and an integer \(r\ge1\)
+let \(H_r(G)\) have, for every \(v\in V(G)\), \(r\) \emph{copies} of \(v\),
+and for every edge \(uv\) one \emph{edge vertex} adjacent to all copies of
+\(u\) and of \(v\). It is bipartite with \(rN+|E(G)|\) vertices. Let \(G\)
+come from Theorem~\ref{th:family} with \(K\) even, put \(m=|E(G)|\),
+\(r=100N(m+1)\), \(H=H_r(G)\) and
+\[
+T=B\Lambda/16 .
+\]
+In NO, every cut of \(G\) with both sides of at least \(N/8\) vertices has
+at least \(B\Lambda\cdot\frac18\cdot\frac78\ge T\) edges; in particular
+\(T\le m\).
+
+A set \(X\subseteq V(H)\) is a \emph{\(\theta\)-balanced separator} if every
+component of \(H-X\) has at most \(\theta|V(H)|\) vertices. We use the
+standard fact that every tree decomposition of width \(w\) has a bag that
+is a \(\tfrac12\)-balanced separator: assign each vertex to a bag containing
+it, choose a node \(t^*\) such that every component of the tree minus
+\(t^*\) receives at most \(|V(H)|/2\) assigned vertices, and note that the
+bags meeting a component of \(H-B_{t^*}\) form a subtree avoiding \(t^*\).
+Hence \(\tw(H)+1\) is at least the minimum size of a \(\tfrac23\)-balanced
+separator.
+
+\begin{lemma}[NO bounds]\label{lem:sepNO}
+In NO, every \(\tfrac23\)-balanced separator of \(H\) has at least \(T\)
+vertices. Consequently \(\tw(H)\ge T-1\), \(\pw(H)\ge T-1\) and
+\(\td(H)\ge T\).
+\end{lemma}
+
+\begin{proof}
+Let \(|X|<T\). Let \(F\) be the set of edges of \(G\) whose edge vertices lie
+in \(X\), and \(G'=G-F\). Since \(|X|<T\le m\), every \(v\in V(G)\) keeps at
+least \(r-m\) copies. For a component \(Q\) of \(G'\) with \(|Q|\ge2\), the
+surviving copies of the vertices of \(Q\) and the surviving edge vertices of
+edges of \(G'[Q]\) induce a connected subgraph of \(H-X\). If some component
+has \(|Q|>3N/4\), then \(H-X\) has a component with more than
+\(\frac{3N}4(r-m)>\frac23(rN+m)\) vertices, by the choice of \(r\). Otherwise
+group the components of \(G'\) into \(S\) with \(N/8\le|S|\le7N/8\) as in
+the proof of Corollary~\ref{cor:edge}(a); all edges of \(\partial_GS\) lie
+in \(F\), so \(|X|\ge|F|\ge T\), a contradiction. The bound on \(\tw\)
+follows from the fact above; \(\pw\ge\tw\); and an elimination forest of
+height \(h\) yields a tree decomposition whose bags are the root-to-vertex
+chains, so \(\td\ge\tw+1\).
+\end{proof}
+
+\begin{lemma}[YES bounds]\label{lem:sepYES}
+In YES:
+\begin{enumerate}[label=\textup{(\alph*)}]
+\item \(H\) has a \(\tfrac23\)-balanced separator of at most \(C_K\Lambda\)
+vertices;
+\item there is an ordering of \(V(H)\) in which, at every prefix, at most
+\(2C_K\Lambda\) placed vertices have an unplaced neighbor; hence
+\(\pw(H)\le2C_K\Lambda\);
+\item \(\td(H)\le C_K\Lambda+1\);
+\item \(H\) has a chordal supergraph with at most \(C_K\Lambda^2/2\) added
+edges, none of them incident to a copy.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(a) Let \(S\) be the union of \(K/2\) classes of (Y1) and \(X\) the edge
+vertices of \(\partial_GS\). Each component of \(H-X\) has at most
+\(rN/2+m\le\frac23(rN+m)\) vertices.
+
+(b) Let \(v_1,\dots,v_N\) be the YES order of (Y1). For \(i=1,\dots,N\)
+place the edge vertices of the edges from \(v_i\) to later vertices, then
+the \(r\) copies of \(v_i\). A copy is never live (all its neighbors are
+edge vertices placed earlier). Between groups, the live vertices are the
+edge vertices of \(\partial\{v_1,\dots,v_i\}\); during group \(i\) they lie
+in \(\partial\{v_1,\dots,v_{i-1}\}\cup\partial\{v_1,\dots,v_i\}\). So at
+most \(2C_K\Lambda\) vertices are live at any time. Taking as bags the
+current vertex together with the vertices live just before it gives a path
+decomposition of width at most \(2C_K\Lambda\): an edge is covered in the bag
+of its later endpoint, and each vertex occupies the consecutive bags from its
+placement to its last neighbor.
+
+(c) Use the map \(\lambda\) of (Y2). For a node \(x\) let \(R_x\) be the set
+of edge vertices \(uv\) with \(x\) the splitting node of
+\(\lambda(u),\lambda(v)\) (for a leaf: \(\lambda(u)=\lambda(v)=x\)). Build a
+rooted forest recursively: at \(x\), stack \(R_x\) as a chain and hang
+below its last element the forests built at the children of \(x\); at a
+leaf, hang the copies of the vertices assigned to it below the chain. Every
+edge of \(H\) joins an edge vertex \(e=uv\in R_x\) to a copy of \(u\) or
+\(v\), which lies below \(x\) and hence below \(e\). Since \(|R_x|\le L_x\),
+the height is at most \(\max_P\sum_{x\in P}L_x+1\le C_K\Lambda+1\).
+
+(d) Add to \(\Tr\) a private child \(y_\kappa\) of the leaf \(\lambda(v)\)
+for each copy \(\kappa\) of each \(v\). Represent the copy \(\kappa\) by
+\(\{y_\kappa\}\) and the edge vertex \(e=uv\) by the subtree
+\(\route(\lambda(u),\lambda(v))\cup\{y_\kappa:\kappa\text{ a copy of }u\text{ or
+}v\}\). The intersection graph \(H'\) of these subtrees contains \(H\). It is
+chordal: each subtree has a highest node; eliminate repeatedly a subtree
+whose highest node \(h_a\) is deepest. A remaining neighbor meets it below
+or at \(h_a\) and has its own highest node at depth at most that of \(h_a\),
+so it contains \(h_a\); the remaining neighbors pairwise intersect at
+\(h_a\). In \(H'\) copies are adjacent only to the edge vertices of their
+incident edges, and two edge-vertex subtrees meeting at a private child also
+meet at its parent. So the added edges join edge vertices whose routes share
+a node of \(\Tr\), and their number is at most
+\(\sum_x\binom{L_x}2\le\frac12\sum_xL_x^2\le C_K\Lambda^2/2\).
+\end{proof}
+
+\begin{proposition}[Fill-in]\label{prop:fillin}
+In NO, every chordal supergraph of \(H\) has at least \(T^2/8\) added edges.
+\end{proposition}
+
+\begin{proof}
+A chordal supergraph \(H'\) has treewidth at least \(\tw(H)\ge T-1\), so it
+has a clique on \(s\ge T\) vertices. As \(H\) is bipartite, at most
+\(s^2/4\) of its edges lie inside this clique, so at least
+\(\binom s2-s^2/4=s(s-2)/4\ge s^2/8\) edges are added (\(s\ge4\)).
+\end{proof}
+
+\paragraph{Other width parameters.}
+We use the following comparisons, for every graph \(H\):
+\(\mmw(H)\le\bw(H)\le\tw(H)+1\le3\mmw(H)\) \cite{rs91,vat12,jst15}; on the
+line graph \(L(H)\), clique-width lies between \((\tw(H)+1)/4\) and
+\(2\tw(H)+2\) \cite{gw07}, and NLC-width is within a factor two of
+clique-width \cite{joh98}. Branch decompositions of \(H\) are subcubic trees
+with leaf set \(E(H)=V(L(H))\), which are also the decomposition trees for
+rank-width, Boolean-width and mim-width of \(L(H)\). For a tree edge
+splitting \(E(H)\) into \(E_1,E_2\), let \(h\) be the number of vertices of
+\(H\) incident to edges of both sides (the middle set; \(\bw\) minimizes the
+maximum of \(h\)).
+
+\begin{lemma}\label{lem:linewidth}
+For a bipartite simple graph \(H\) and every cut \((E_1,E_2)\) as above, the
+mim-value, the \(\F_2\)-cut-rank and the Boolean-width value
+(\(\log_2\) of the number of distinct neighborhood unions) of the cut in
+\(L(H)\) all lie between \(h/8\) and \(h\). Hence rank-width, Boolean-width
+and mim-width of \(L(H)\) lie between \(\bw(H)/8\) and \(\bw(H)\).
+\end{lemma}
+
+\begin{proof}
+Upper bounds: \(e_1\in E_1\) and \(e_2\in E_2\) are adjacent in \(L(H)\) iff
+they share a vertex, which is then a middle vertex. The cross matrix equals
+\(XY^{\top}\), where \(X,Y\) are the incidence matrices of \(E_1,E_2\)
+against the middle set; over \(\F_2\) this is exact because two distinct
+edges share at most one endpoint. So the cut-rank is at most \(h\). A union
+of neighborhoods of edges of \(E_1\) is determined by the middle vertices
+they touch, so there are at most \(2^h\) such unions. An induced matching
+across the cut gives an identity submatrix of the cross matrix and \(2^s\)
+distinct unions, so mim-value \(\le\) cut-rank and mim-value \(\le\)
+Boolean-width value; it remains to show that the mim-value is at least
+\(h/8\). At least \(h/2\) middle vertices lie in one class of the
+bipartition of \(H\); at each such \(v\) choose edges \(vl_v\in E_1\) and
+\(vr_v\in E_2\), where \(l_v\ne r_v\) lie in the other class. Color that
+other class randomly red/blue; in expectation at least \(h/8\) of these
+\(v\) have \(l_v\) red and \(r_v\) blue. For such \(v\ne v'\), the edges
+\(vl_v\) and \(v'r_{v'}\) share no vertex (\(v\ne v'\) lie in the same
+class, and \(l_v\ne r_{v'}\) by color), so the pairs
+\((vl_v,vr_v)\) form an induced matching across the cut.
+\end{proof}
+
+The lower bound \(\bw(H)/25\) for mim-width of line graphs from
+\cite[Theorem~4]{bmpy} would also suffice.
+
+\begin{proposition}[Tree-independence number]\label{prop:treealpha}
+Let \(\mathrm{tree}\text{-}\alpha\) denote the tree-independence number. In
+YES, \(\mathrm{tree}\text{-}\alpha(L(H))\le\tw(H)+1\le2C_K\Lambda+1\). In NO,
+\(\mathrm{tree}\text{-}\alpha(L(H))\ge T/2\).
+\end{proposition}
+
+\begin{proof}
+YES: replace each bag of a tree decomposition of \(H\) by the set of edges
+incident to its vertices. The bags containing \(uv\) form the union of the
+subtrees of \(u\) and \(v\), which intersect; adjacent edges share a vertex
+and so share a bag. An independent set in a new bag is a matching meeting
+the old bag in distinct vertices, so it has at most \(\tw(H)+1\) elements;
+and \(\tw(H)\le\pw(H)\le2C_K\Lambda\). NO: take a tree decomposition of
+\(L(H)\) whose bags have independence number at most \(a\). The edges at a
+vertex \(v\) of \(H\) form a clique of \(L(H)\), so some bag contains them
+all; assign \(v\) to such a bag (isolated vertices arbitrarily). Choose a
+node \(t^*\) such that each component of the tree minus \(t^*\) receives at
+most \(|V(H)|/2\) assigned vertices, and let \(Y\) be the endpoints of a
+maximal matching among the edges of the bag at \(t^*\); then \(|Y|\le2a\) and
+\(Y\) covers every edge in that bag. An edge \(uv\) whose endpoints are
+assigned to different components, or one of them to \(t^*\), lies in the
+bags of \(u\) and \(v\) and hence, by connectivity, in the bag at \(t^*\);
+so it is covered by \(Y\). Surviving vertices assigned to \(t^*\) are
+isolated in \(H-Y\). Thus \(Y\) is a \(\frac12\)-balanced separator, and
+\(2a\ge T\) by Lemma~\ref{lem:sepNO}.
+\end{proof}
+
+\subsection{Vertex layouts, interval completion and pebbling}\label{sec:layouts}
+
+For an ordering \(\pi\) of a graph and \(0\le i\le n\), let \(\live_\pi(i)\)
+be the number of vertices among the first \(i\) that have a neighbor after
+position \(i\). The \emph{vertex separation} is \(\max_i\live_\pi(i)\)
+(equal to pathwidth \cite{kin92}) and the \emph{vertex sum} is
+\(\sum_i\live_\pi(i)\); cutwidth and minimum linear arrangement are the
+edge analogues. For a DAG and a topological order, the directed live count
+uses out-neighbors, and the directed edge count is the number of arcs from
+placed to unplaced vertices; taking maximum or sum gives the four directed
+objectives of \cite{wapl14}. Together with the two undirected edge
+objectives (Corollary~\ref{cor:edge}(b)) and the two undirected vertex
+objectives, these are the eight layout objectives of \cite{wapl14}.
+
+\begin{proposition}[Vertex sum]\label{prop:vsum}
+In YES the vertex sum of \(H\) is at most \(2C_K\Lambda(rN+m)\). In NO every
+ordering has vertex sum at least \(rNT/10\).
+\end{proposition}
+
+\begin{proof}
+YES: the ordering of Lemma~\ref{lem:sepYES}(b). NO: fix an ordering. Suppose
+first that some edge vertex \(e\) incident to \(u\) appears after at least
+\(r/2\) copies of \(u\). During the placements of the copies of \(u\) ranked
+\(r/4+1,\dots,r/2\), the first \(r/4\) copies are live (their neighbor
+\(e\) is unplaced). This contributes at least \(r^2/16\ge r^2/32\), and
+\(r^2/32>rNm/10\ge rNT/10\) by the choice of \(r\). Otherwise every original
+vertex has at least \(r/2\) \emph{good} copies, placed after all its incident
+edge vertices; let \(g\ge rN/2\) be their number. For each of the at least
+\(g/3\ge rN/10\) prefixes containing between \(g/3\) and \(2g/3\) good copies,
+there are at least \(rN/6-1\) good copies on each side, hence at least
+\(N/6-1/r\ge N/8\) original vertices with a good copy on each side, and every
+original vertex has a good copy on some side. Partition \(V(G)=A'\sqcup B'\)
+with \(|A'|,|B'|\ge N/8\), \(A'\) having placed good copies and \(B'\)
+unplaced ones (assign the vertices with good copies on both sides suitably).
+An edge vertex of an edge between \(A'\) and \(B'\) precedes the good copies
+of its endpoint in \(A'\), so it is placed, and it has an unplaced neighbor in
+\(B'\); so it is live. There are at least \(T\) such edges.
+\end{proof}
+
+\begin{proposition}[Interval completion]\label{prop:interval}
+For every graph, the minimum vertex sum over orderings equals the minimum
+number of edges of an interval supergraph. Consequently, if \(N\ge640C'/B\)
+(which Theorem~\ref{th:family} allows), the minimum number of \emph{added}
+edges of an interval supergraph of \(H\) is at most \(2C_K\Lambda(rN+m)\) in
+YES and at least \(rNT/20\) in NO.
+\end{proposition}
+
+\begin{proof}
+Given an ordering, give each vertex the interval from its position to the
+position of its last later neighbor (or a point). The interval graph
+contains the input graph, and the pairs \((u,w)\) with \(u\) earlier and
+\(u\)'s interval containing the position of \(w\) are counted exactly by
+\(\sum_i\live(i-1)\) at \(w\)'s position \(i\). Conversely, order an interval
+supergraph by left endpoints. If \(u\) precedes the vertex \(w\) at
+position \(i\) and is live at \(i-1\), with an input neighbor \(v\) at
+position \(\ge i\), then \(u\)'s interval meets \(v\)'s, which starts no
+earlier than \(w\)'s, so it contains the left endpoint of \(w\); thus
+\(uw\) is an edge of the supergraph. Hence the supergraph has at least the
+vertex sum of this order many edges. For \(H\), \(|E(H)|=2rm\le2rC'\Lambda
+\le rNT/20\) when \(N\ge640C'/B\); subtract from Proposition~\ref{prop:vsum}.
+\end{proof}
+
+\begin{proposition}[Directed layouts]\label{prop:directed}
+Let \(D_r\) be the DAG on \(V(H_r(G))\) with arcs from each edge vertex to
+the copies of its endpoints, for any \(r\ge1\). In YES some topological order
+has at every prefix at most \(2C_K\Lambda\) live vertices and at most
+\(4rC_K\Lambda\) crossing arcs. In NO, in every topological order at least
+\(rN/4\) prefixes have at least \(T\) live vertices and at least \(rT/8\)
+crossing arcs.
+\end{proposition}
+
+\begin{proof}
+YES: the order of Lemma~\ref{lem:sepYES}(b) is topological; each live edge
+vertex has at most \(2r\) arcs. NO: consider a prefix containing between
+\(rN/3\) and \(2rN/3\) copies; there are at least \(rN/3\) such prefixes. At
+least \(N/3\) originals have a placed copy. If \(x\) originals have at least
+\(r/8\) unplaced copies, then \(rN/3\le rx+(r/8)(N-x)\), so \(x\ge5N/21\).
+Every original lies in one of these two sets (one with no placed copy has
+\(r\) unplaced copies), so we may partition \(V(G)=A'\sqcup B'\) with
+\(|A'|,|B'|\ge N/8\), every vertex of \(A'\) having a placed copy and every
+vertex of \(B'\) at least \(r/8\) unplaced copies. An edge vertex of an edge
+between \(A'\) and \(B'\) precedes the placed copy, so it is placed, and it
+has at least \(r/8\) arcs to unplaced copies. There are at least \(T\) such
+edges.
+\end{proof}
+
+\paragraph{Pebbling.}
+A one-shot black pebbling of a DAG places a pebble on a vertex only when all
+its predecessors carry pebbles, removes pebbles at any time, and pebbles
+every vertex exactly once; its cost is the maximum number of simultaneous
+pebbles. In one-shot black-white pebbling (complete visiting convention of
+\cite{wapl14}) white pebbles may be placed at any time and removed only when
+all predecessors carry pebbles, every vertex receives a pebble exactly once,
+and every sink is checked, either at its black placement or at the removal
+of its white pebble.
+
+\begin{proposition}[Pebbling]\label{prop:pebble}
+\begin{enumerate}[label=\textup{(\alph*)}]
+\item The one-shot black pebbling cost of a DAG lies between the minimum
+over topological orders of the maximum directed live count and that value
+plus one. Hence it is at most \(2C_K\Lambda+1\) for \(D_r\) in YES and at
+least \(T\) in NO.
+\item The same gap holds on DAGs with a single sink and maximum indegree two.
+\item For the DAG \(P_H\) with a source \(s_v\) for each vertex \(v\) of \(H\)
+and a sink \(t_e\) for each edge \(e\), with the two endpoint sources as
+predecessors, the one-shot black-white pebbling cost lies between
+\(\pw(H)+1\) and \(\pw(H)+2\).
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+(a) The placement order is topological, and a placed vertex with an
+unpebbled successor must keep its pebble; so at the placement of the
+\(i\)-th vertex all vertices live at \(i-1\) carry pebbles. Conversely,
+pebbling in a topological order and removing each pebble after the last
+successor costs at most the live maximum plus one. Apply
+Proposition~\ref{prop:directed}.
+
+(b) Use the unreplicated DAG \(D_1\). The YES order still has live maximum
+at most \(2C_K\Lambda\). In NO, in a topological order of \(D_1\) stop
+immediately after half of the original vertices have been placed: the
+placed and unplaced originals each number at least \(N/8\), every edge vertex
+of an edge between them is placed (it precedes its endpoints) and has an
+unplaced successor, so at least \(T\) vertices are live. The sink-merging
+tree and indegree-reduction pyramids of \cite[Lemmas~7.1--7.2]{wapl14}
+produce a single-sink DAG of maximum indegree two, preserve the lower bound,
+and increase the upper bound by at most \(s+1+\max\{2,d\}\), where \(s\le N\)
+is the number of sinks and \(d\le N-1\) the maximum indegree of \(D_1\).
+Since \(N\le\Lambda\), the YES bound remains \(O(C_K\Lambda)\).
+
+(c) In a one-shot strategy each source carries a pebble during one time
+interval. Each sink \(t_{uv}\) is checked at a time when \(s_u\) and \(s_v\)
+both carry pebbles. The sets of pebbled sources over time therefore form a
+path decomposition of \(H\) (isolated vertices may get singleton bags), with
+bags of size at most the cost. Conversely, from a path decomposition of width
+\(w\), introduce and remove sources as their bag intervals begin and end
+(removing before introducing at each transition), and pebble each sink
+\(t_{uv}\) with a black pebble, then remove it, at a bag containing \(u,v\);
+this uses at most \(w+2\) pebbles.
+\end{proof}
+
+\subsection{Proof of Theorem~\ref{th:main}(A)}
+
+Fix \(c>1\). Take \(K=2\) in Theorem~\ref{th:family} (or \(K\) divisible by
+\(k\) or by the denominator of \(\delta\), as in Corollary~\ref{cor:edge}),
+so \(C_K\) is fixed, and then a fixed \(B\) with \(B/16>c(C_K+2)\), and
+\(n_1\) as required in Proposition~\ref{prop:interval} and for \(N\) large.
+With \(s=C_K\Lambda+1\), Lemmas~\ref{lem:sepNO} and~\ref{lem:sepYES} give
+\(\td(H)\le s\) in YES and \(\tw(H)\ge B\Lambda/16-1>cs\) in NO; since
+\(\tw\le\pw\le\td-1\), this gives every-factor hardness for treewidth,
+pathwidth and treedepth. Lemma~\ref{lem:sepYES}(d) and
+Proposition~\ref{prop:fillin} give YES \(\le C_K\Lambda^2/2\) versus NO
+\(\ge B^2\Lambda^2/2048\) for fill-in; Lemmas~\ref{lem:sepNO}
+and~\ref{lem:sepYES}(a) give the balanced vertex separator. The comparison
+inequalities, Lemma~\ref{lem:linewidth} and
+Proposition~\ref{prop:treealpha} transfer the treewidth gap, up to fixed
+constant factors and an additive one that is absorbed by \(\Lambda\), to
+branch-width, maximum-matching width, and to clique-, NLC-, rank-,
+Boolean-, mim-width and tree-independence number of \(L(H)\).
+Propositions~\ref{prop:vsum}--\ref{prop:pebble} and Lemma~\ref{lem:sepYES}(b)
+give the vertex layouts, interval completion, the directed layouts and
+pebbling, and Corollary~\ref{cor:edge} gives the edge layouts, carving-width
+and the partitioning problems. In each case the NO/YES ratio is a fixed
+positive multiple of \(B/C_K\) (or of \(B^2/C_K\) for fill-in), so a large
+fixed \(B\) gives factor \(c\). For interval completion, a
+\(c\)-approximation of the added edges also yields one of the total edges,
+by adding back \(|E(H)|\). \qed
+
+\section{Gap small-set expansion}\label{sec:sse}
+
+For a symmetric stochastic \(m\times m\) matrix \(P\) and
+\(f\in[0,1]^m\setminus\{0\}\) of \emph{mass} \(z=\frac1m\sum_af_a\), put
+\[
+\Phi_P(f)=\frac{\sum_{a,b}P_{ab}f_a(1-f_b)}{\sum_af_a}=1-\frac{f^{\top}Pf}{mz}.
+\]
+For a \(d\)-regular graph with random-walk matrix \(P\), \(\Phi_P(\ind_S)=
+\Phi_G(S)\). For a nonnegative symmetric matrix \(Q\) on a set \(V\) and
+\(x\in[0,1]^V\), write \(Q[x]=\sum_{i,j}Q_{ij}x_i(1-x_j)\).
+
+\begin{theorem}[Conductance on a size window]\label{th:window}
+Fix rationals \(\delta>0\) and \(M\ge1\) with \([\delta/M,M\delta]\subseteq
+(0,1/2]\), and \(R>1\). There are fixed \(0<a<b<1\) with \(b/a>R\), a fixed
+integer \(d\), and a deterministic polynomial-time reduction from 3SAT to
+simple bipartite \(d\)-regular graphs on \(N\) vertices such that: in YES,
+some set of exactly \(\delta N\) vertices has conductance at most \(a\); in
+NO, every set \(S\) with \(\delta N/M\le|S|\le M\delta N\) has conductance at
+least \(b\).
+\end{theorem}
+
+\begin{theorem}[Fixed-degree Gap-SSE]\label{th:gapsse}
+For every fixed rational \(0<\delta\le1/4\) there are a fixed
+\(\eta=\eta(\delta)<1/2\) and a fixed integer \(d\) such that, for each fixed
+integer \(j\ge1\), there is a deterministic polynomial-time reduction from
+3SAT to simple bipartite \(d\)-regular graphs on \(N\) vertices with: in
+YES, some set of exactly \((\delta/j)N\) vertices has conductance at most
+\(\eta\); in NO, every nonempty set of at most \((\delta/j)N\) vertices has
+conductance at least \(1-\eta\).
+\end{theorem}
+
+\subsection{A positive semidefinite chain from the balanced system}
+
+\begin{lemma}\label{lem:chain}
+Fix \(\delta,M,R\) as in Theorem~\ref{th:window}, an integer \(K\ge2\) with
+\(K\delta\in\Z\), a rational \(B\ge64(R+1)A_K/\delta\), let \(W_1=W_1(K,B)\)
+be the bound of Lemma~\ref{lem:balance}, and fix a rational
+\(H\ge\max\{2B,32MW_1/\delta\}\). Put \(a_0=A_K/(2H\delta)\) and
+\(b_0=B/(16H)\). There is a deterministic polynomial-time reduction from
+3SAT to a symmetric, positive semidefinite, stochastic rational matrix \(P\)
+of size \(m\times m\) such that: in YES there is \(S'\subseteq[m]\) with
+\(|S'|=\delta m\) and \(\Phi_P(\ind_{S'})\le a_0\); in NO,
+\(\Phi_P(f)\ge b_0\) for every \(f\in[0,1]^m\) of mass in
+\([\delta/M,M\delta]\). Moreover \(b_0/a_0=B\delta/(8A_K)\ge8(R+1)\).
+\end{lemma}
+
+\begin{proof}
+Let \((V,c,\mu)\) be the output of Lemma~\ref{lem:balance}, \(W=W(c)\le
+W_1\), \(h=|V|\), \(d_i=\sum_jc_{ij}\), and
+\(\nu_i=(1-2W/H)\mu_i+d_i/H\), a probability vector with
+\(\|\nu-\mu\|_{\rm TV}\le2W/H\). Let \(L\) be the symmetric matrix with
+\(L_{ij}=c_{ij}/H\) for \(i\ne j\) and \(L_{ii}=(1-2W/H)\mu_i\); its row sums
+are \(\nu_i\). Put \(\widehat L=(L+\operatorname{diag}\nu)/2\). It is positive
+semidefinite since \(v^{\top}(\operatorname{diag}\nu+L)v=\frac12\sum_{i,j}
+L_{ij}(v_i+v_j)^2\ge0\).
+
+\emph{Fractional cuts.} For \(x\in[0,1]^V\) and \(p=\sum_i\mu_ix_i\), let
+\(R\subseteq V\) contain \(i\) independently with probability \(x_i\). The
+off-diagonal part of \(\widehat L[x]\) equals \(\frac1{2H}\E\,c(\partial
+R)\ge\frac B{2H}\bigl[p(1-p)-\sum_i\mu_i^2x_i(1-x_i)\bigr]\) in NO. Since
+\(2W/H\le1/2\), the diagonal entry satisfies \(\widehat
+L_{ii}\ge\mu_i/4\ge B\mu_i^2/(2H)\) (as \(H\ge2B\)). Hence
+\(\widehat L[x]\ge\frac B{2H}p(1-p)\) in NO.
+
+\emph{Copies.} Take \(J\ge16Mh/\delta\), let \(k_i=K\max\{1,\lceil
+J\nu_i\rceil\}\), \(m=\sum_ik_i\) and \(\omega=KJ/m\); then \(KJ\le m\le
+K(J+h)\) and \(1-\omega\le h/J\le\delta/(16M)\). On the \(m\) copies let
+\(Z_{ab}=\omega\widehat L_{ij}/(k_ik_j)\) for \(a\) a copy of \(i\) and \(b\)
+a copy of \(j\) (including \(a=b\)). The row sum of \(Z\) at a copy of \(i\)
+is \(\omega\nu_i/k_i\le1/m\); add the nonnegative amount
+\(1/m-\omega\nu_i/k_i\) on the diagonal, and let \(P\) be \(m\) times the
+result. Then \(P\) is symmetric and stochastic, and positive semidefinite
+because \(y^{\top}Zy=\omega\,\bar y^{\top}\widehat L\,\bar y\) with
+\(\bar y_i=\sum_{a\text{ copy of }i}y_a/k_i\).
+
+\emph{NO.} Let \(f\in[0,1]^m\) have mass \(z\in[\delta/M,M\delta]\), and let
+\(x_i\) be the average of \(f\) over the copies of \(i\). Then
+\(\sum_{a,b}(P/m)_{ab}f_a(1-f_b)\ge Z[f]=\omega\widehat L[x]\). The class
+counting law \(k_i/m\) equals \(\omega\nu\) plus a nonnegative measure of mass
+\(1-\omega\), so \(|z-\nu\cdot x|\le1-\omega\), and
+\(|z-p|\le(1-\omega)+2W/H\le\delta/(8M)\). On the window this gives
+\(p\ge7z/8\) and \(p\le9/16\), so \(p(1-p)\ge z/4\). Therefore
+\(\Phi_P(f)\ge\omega\frac B{2H}\cdot\frac z4\cdot\frac1z\ge\frac B{16H}=b_0\),
+using \(\omega\ge1/2\).
+
+\emph{YES.} The values \(\nu_i\), hence the counts \(k_i\), are invariant
+under \(\mathfrak S_K\), so by Lemma~\ref{lem:balance}(ii) each color class
+of keys carries exactly \(m/K\) copies, including copies of zero-mass keys.
+Let \(S'\) be the set of copies of the keys in \(K\delta\) color classes;
+\(|S'|=\delta m\). The diagonal additions do not contribute to
+\(\Phi_P(\ind_{S'})\), and the crossing part is \(\omega\sum c_{ij}/(2H)\)
+over pairs of keys of different colors, at most \(A_K/(2H)\). Hence
+\(\Phi_P(\ind_{S'})\le A_K/(2H\delta)=a_0\).
+\end{proof}
+
+\subsection{Degree reduction}
+
+\begin{lemma}\label{lem:degree}
+For every rational \(\eps\in(0,1)\) there is an integer \(D=D(\eps)\) with
+the following property. Let \(q\ge D^2\) be a prime and \(L_0\) a square
+integer, and let \(P\) be a symmetric stochastic rational \(m\times m\)
+matrix. One can compute in time polynomial in \(m,L_0,q\) a simple bipartite
+\((D^2q)\)-regular graph \(\Gamma\) whose shores \(V_L,V_R\) have
+\(n_s=mL_0q^2\) vertices each, partitioned into \(m\) classes of \(L_0q^2\)
+vertices, such that for every \(S\subseteq V(\Gamma)\), with \(\alpha_i\)
+and \(\beta_i\) the densities of \(S\) in the \(i\)-th left and right classes
+and \(z=|S|/(2n_s)\),
+\[
+\Bigl|\frac{e(S)}{D^2q\,n_s}-\frac{\alpha^{\top}P\beta}{m}\Bigr|\le
+\xi z,\qquad \xi:=q^{-1/2}+2\eps+\frac{2m}{L_0}.
+\]
+Consequently, for \(S\ne\varnothing\): if \(P\) is positive semidefinite then
+\(\Phi_\Gamma(S)\ge\Phi_P(\frac{\alpha+\beta}2)-\xi\); and if
+\(\alpha=\beta=\ind_{S'}\) then \(\Phi_\Gamma(S)\le\Phi_P(\ind_{S'})+\xi\).
+\end{lemma}
+
+\begin{proof}
+\emph{Rounding.} Floor the entries of \(L_0P\) and fill the row and column
+deficits greedily, obtaining nonnegative integers \(n_{ij}\) with all row and
+column sums \(L_0\); with \(P'=(n_{ij}/L_0)\), every row and column of
+\(P'-P\) has \(\ell_1\)-norm at most \(2m/L_0\), hence
+\(\|P'-P\|\le2m/L_0\).
+
+\emph{Ports.} Give each left and right class \(L_0\) ports, and fix a
+bijection between left and right ports sending exactly \(n_{ij}\) ports of
+left class \(i\) to right class \(j\); let \(U\) be its permutation matrix and
+\(Z\) the averaging projection onto functions constant on port classes. A
+fixed power of the lazy Gabber--Galil expander \cite{gg81} on each square
+port class gives a \(D\)-regular multigraph (loops allowed) whose transition
+matrix \(Q\) satisfies \(\|Q-Z\|\le\eps\), with \(D\) depending only on
+\(\eps\). Then \(\|QUQ-ZUZ\|\le\|(Q-Z)UQ\|+\|ZU(Q-Z)\|\le2\eps\), and \(QUQ\)
+is uniform over \(D^2\) walks, so \(v_{ab}=D^2(QUQ)_{ab}\) is an integer
+multiplicity at most \(D^2\) with row and column sums \(D^2\).
+
+\emph{Incidence replacement.} Replace each port by a copy of \(\F_q^2\) and,
+for each pair of ports \((a,b)\) with \(v_{ab}>0\), choose \(v_{ab}\le q\)
+distinct values \(T_{ab}\subseteq\F_q\) and join the two copies by
+\(A_{T_{ab}}\). By Lemma~\ref{lem:incidence}(i) the graph is simple,
+bipartite and \((D^2q)\)-regular.
+
+\emph{Estimate.} Let \(s_a,t_b\) be the densities of \(S\) at left port \(a\)
+and right port \(b\). By Lemma~\ref{lem:incidence}(iii) and
+\(\sqrt{s_at_b}\le(s_a+t_b)/2\),
+\(\bigl|e(S)-q^3\sum_{a,b}v_{ab}s_at_b\bigr|\le q^{5/2}\sum_{a,b}v_{ab}
+(s_a+t_b)/2=q^{5/2}D^2(\sum_as_a+\sum_bt_b)/2\). Dividing by
+\(D^2q\,n_s=D^2q^3mL_0\) and noting \(z=(\sum_as_a+\sum_bt_b)/(2mL_0)\),
+\[
+\Bigl|\frac{e(S)}{D^2qn_s}-\frac{s^{\top}QUQt}{mL_0}\Bigr|\le zq^{-1/2}.
+\]
+Next \(|s^{\top}(QUQ-ZUZ)t|/(mL_0)\le2\eps\|s\|\|t\|/(mL_0)\le
+\eps(\sum s_a+\sum t_b)/(mL_0)=2\eps z\). Since \(Zs\) and \(Zt\) take the
+values \(\alpha_i\) and \(\beta_j\) on the port classes,
+\(s^{\top}ZUZt=\sum_{i,j}n_{ij}\alpha_i\beta_j=L_0\alpha^{\top}P'\beta\).
+Finally \(|\alpha^{\top}(P'-P)\beta|/m\le\frac{2m}{L_0}\cdot\frac{\|\alpha\|
+\|\beta\|}m\le\frac{2m}{L_0}\cdot\frac{\sum\alpha_i+\sum\beta_i}{2m}=
+\frac{2m}{L_0}z\).
+
+\emph{Consequences.} \(\Phi_\Gamma(S)=1-2e(S)/(D^2q|S|)=1-e(S)/(D^2qn_sz)\),
+and \(f=(\alpha+\beta)/2\) has \(\sum_if_i=mz\). With \(g=(\alpha-\beta)/2\)
+and \(P\) symmetric, \(\alpha^{\top}P\beta=f^{\top}Pf-g^{\top}Pg\le
+f^{\top}Pf\) when \(P\) is positive semidefinite, which gives the first
+consequence; the second follows from the lower estimate with
+\(\alpha=\beta=\ind_{S'}\).
+\end{proof}
+
+\subsection{Proofs of Theorems~\ref{th:window} and~\ref{th:gapsse}}
+
+\begin{proof}[Proof of Theorem~\ref{th:window}]
+Fix \(K\) with \(K\delta\in\Z\), then \(B\) and \(H\) as in
+Lemma~\ref{lem:chain}. Fix \(\eps\) and a prime \(q\ge D(\eps)^2\) with
+\(q^{-1/2}+2\eps\le a_0/4\), and take a square \(L_0\), polynomial in \(m\),
+with \(2m/L_0\le a_0/4\); so \(\xi\le a_0/2\). Apply Lemma~\ref{lem:degree}
+to the matrix \(P\) of Lemma~\ref{lem:chain}; \(N=2n_s\) and \(d=D^2q\) is
+fixed. In YES, the set \(S\) consisting of both shores of the classes in
+\(S'\) has exactly \(\delta N\) vertices and \(\Phi_\Gamma(S)\le
+\frac32a_0\le a:=2a_0\). In NO, a set with \(\delta N/M\le|S|\le M\delta N\)
+has \(z\) in the window and \(\Phi_\Gamma(S)\ge b_0-a_0/2\ge b:=b_0/2\),
+since \(a_0\le b_0/8\). Finally \(b/a=b_0/(4a_0)\ge2(R+1)>R\).
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{th:gapsse}]
+Take \(M=2\) and \(R=2\) in Lemma~\ref{lem:chain}, and \(H\) so large that
+\(b_0\le\delta/100\) (this lowers \(a_0\) and \(b_0\) proportionally). Let
+\(\kappa=(a_0+b_0)/2\) and
+\[
+\lambda=\frac{1/2-\kappa}{1-\delta-\kappa}\in(0.4,1),\qquad\text{so that}\qquad
+(1-\lambda)\kappa+\lambda(1-\delta)=\tfrac12,
+\]
+and \(P_\lambda=(1-\lambda)P+\lambda J/m\), again symmetric, stochastic and
+positive semidefinite. For \(f\) of mass \(z\),
+\(\Phi_{J/m}(f)=1-z\), so \(\Phi_{P_\lambda}(f)=(1-\lambda)\Phi_P(f)+
+\lambda(1-z)\). Put \(g=(1-\lambda)(b_0-a_0)/2>0\). In YES,
+\(\Phi_{P_\lambda}(\ind_{S'})\le(1-\lambda)a_0+\lambda(1-\delta)=1/2-g\). In
+NO, for \(z\in[\delta/2,\delta]\), \(\Phi_{P_\lambda}(f)\ge(1-\lambda)b_0+
+\lambda(1-\delta)=1/2+g\); for \(0<z<\delta/2\), using only
+\(\Phi_P(f)\ge0\), \(\Phi_{P_\lambda}(f)\ge\lambda(1-\delta)+\lambda\delta/2
+\ge\lambda(1-\delta)+(1-\lambda)b_0=1/2+g\), because
+\(\lambda\delta/2\ge0.2\delta\ge(1-\lambda)b_0\). Apply
+Lemma~\ref{lem:degree} to \(P_\lambda\) with \(\xi<g/2\) and put
+\(\eta=1/2-g/2\): YES gives a set of exactly \(\delta N\) vertices with
+conductance at most \(\eta\), and NO gives conductance at least \(1-\eta\)
+for every nonempty set of at most \(\delta N\) vertices. For density
+\(\delta/j\), output \(j\) disjoint copies of this graph: the YES set of one
+copy has \((\delta/j)\) of all vertices; in NO a set of at most
+\(\delta N\) vertices meets each copy in at most \(\delta N\) vertices, and
+its conductance is the size-weighted mean of the conductances of its
+nonempty parts. The degree and \(\eta\) do not depend on \(j\).
+\end{proof}
+
+This proves Theorem~\ref{th:main}(B). In both theorems the YES set takes
+the same number of vertices from each shore.
+
+\section{Bicliques}\label{sec:biclique}
+
+For a bipartite graph with shores \(V_L,V_R\), a \emph{biclique} is a pair
+\(X\subseteq V_L\), \(Y\subseteq V_R\) with all pairs adjacent; its shore
+densities are \(|X|/|V_L|\) and \(|Y|/|V_R|\). Maximum Balanced Biclique
+asks for the largest \(k\) with a biclique of shores of size \(k\); Maximum
+Edge Biclique asks for the maximum of \(|X||Y|\).
+
+\begin{lemma}[Base gap]\label{lem:basegap}
+For every fixed \(\xi>0\) there are fixed rationals \(b<a<1/2\) with
+\(a\ge1/2-\xi\) and a deterministic polynomial-time reduction from 3SAT to
+bipartite graphs with equal shores such that in YES some biclique has two
+equal shores of density at least \(a\), and in NO every biclique has shore
+densities \(\alpha,\beta\) with \(\sqrt{\alpha\beta}\le b\).
+\end{lemma}
+
+\begin{proof}
+Apply Lemma~\ref{lem:balance} with \(K=2\) and write \(A=A_2\). Fix \(B\ge
+64A\), let \(W_*=W_1(2,B)\), and fix \(H\ge100\max\{W_*,B,A\}\) with
+\(A/H\le\xi\). Let \((V,c,\mu)\) be the output and \(W=W(c)\le W_*\).
+Form a \emph{conflict graph}: its vertices are the keys \(i\in V\) and one
+port \(e\) for each pair \(e=\{i,j\}\) with \(c_e>0\), the port being
+adjacent to \(i\) and \(j\). Give keys and ports the weights
+\[
+w_i=(1-3W/H)\mu_i+d_i/H,\qquad w_e=c_e/H,
+\]
+which are nonnegative and sum to \((1-3W/H)+2W/H+W/H=1\). Let \(s\) be the
+number of keys and ports, fix \(\eps=\min\{A/H,1/100\}\) and take
+\(J\ge s/\eps\). Replace each key or port \(u\) by a clique of
+\(Jw_u+e_u\) copies, \(0\le e_u\le1\) (namely \(\max\{1,\lceil Jw_u\rceil\}\)),
+and join copies of adjacent classes completely. The counting distribution on
+classes is a mixture of \(w\) and the normalized rounding excess, of excess
+fraction at most \(s/J\le\eps\), so it is within \(\eps\) of \(w\) in total
+variation. Let \(m\) be the number of copies. The output \(\Gamma\) has two
+shores, each a copy of this set of \(m\) copies, and \(x\in V_L\),
+\(y\in V_R\) are adjacent iff they are distinct and not adjacent in the
+conflict graph. Thus equality counts as a conflict.
+
+\emph{YES.} Let \(\chi\) be the coloring of Lemma~\ref{lem:balance}(ii).
+Omit the ports of pairs \(\{i,j\}\) with \(\chi(i)\ne\chi(j)\), and let
+\(X\) (left) consist of the copies of keys of color \(1\) and of ports with
+both ends of color \(1\), and \(Y\) (right) likewise for color \(2\). Keys
+are adjacent in the conflict graph only to ports, and the retained ports are
+adjacent only to keys of their own color, so \((X,Y)\) is a biclique. The
+color swap preserves degrees, capacities, weights and hence the copy counts,
+and it maps the left set onto the right set; so if \(h\) of the \(m\) copies
+are omitted, both shores have exactly \((m-h)/2\) vertices. The omitted
+weight is at most \(A/H\), so \(h/m\le A/H+\eps\le2A/H\), and both shore
+densities are at least \(a:=1/2-A/H\ge1/2-\xi\).
+
+\emph{NO.} Let \((X,Y)\) be a biclique of densities \(\alpha,\beta\). The
+underlying copies of \(X\) and \(Y\) are disjoint, and since each class is a
+clique of conflicts, no class is represented on both shores; so
+\(\alpha+\beta\le1\). If \(\min\{\alpha,\beta\}<1/3\), then
+\(\alpha\beta<\frac13\cdot\frac23=\frac29<b^2\) for the \(b\) below (as
+\(B/H\le1/100\)). Suppose \(\alpha,\beta\ge1/3\), and let \(X_0,Y_0\) be the
+sets of keys with a copy in \(X\), respectively \(Y\), and \(U\) the keys
+represented on neither side. Since the ports and degree terms weigh \(3W/H\)
+in total, \(\mu(X_0),\mu(Y_0)\ge1/3-3W/H-\eps\ge1/4\), so
+\(\mu(X_0)\in[1/4,3/4]\). Every port between \(X_0\) and \(Y_0\) conflicts
+with a copy in \(X\) and one in \(Y\), so it is omitted; every key in \(U\)
+is omitted. These classes are distinct, and their weight is at least
+\[
+\frac{c(X_0,Y_0)+\sum_{u\in U}d_u}{H}\ \ge\ \frac{c(\partial X_0)}{H}
+\ \ge\ \frac{B\mu(X_0)(1-\mu(X_0))}H\ \ge\ \frac{3B}{16H}.
+\]
+Passing to counts loses at most \(\eps\le A/H\le B/(64H)\), so at least a
+fraction \(B/(8H)\) of the copies is omitted, and
+\(\sqrt{\alpha\beta}\le(\alpha+\beta)/2\le\frac12-\frac B{16H}=:b\). Since
+\(B/16>A\), \(b<a\).
+\end{proof}
+
+\begin{remark}
+The same omitted-weight argument, with \(1/3\) replaced by a fixed balance
+threshold below \(1/2\), shows that the minimum number of vertices whose
+deletion from the blown-up conflict graph leaves two anticomplete sides,
+each of at least that fraction of the vertices, is NP-hard to approximate
+within every fixed factor (taking \(B/A\) large).
+\end{remark}
+
+\begin{theorem}[Polynomial-factor hardness]\label{th:biclique}
+Assume Theorem~U. There is a fixed \(\gamma>0\) such that Maximum Balanced
+Biclique and Maximum Edge Biclique are NP-hard to approximate within
+\(N^\gamma\) on bipartite graphs with \(N\) vertices.
+\end{theorem}
+
+\begin{proof}
+Take Lemma~\ref{lem:basegap} with any \(\xi<1/2\), and fix \(a_1\) with
+\(b<a_1<a\). Pad each shore of size \(m\) to \(n=\lceil\sqrt m\rceil^2\)
+with isolated vertices; a fixed lower bound on \(J\) ensures \(am/n\ge
+a_1\), and NO densities can only decrease (isolated vertices lie in no
+biclique with a nonempty other shore). Identify each shore with
+\([n]=\Z_{\sqrt n}^2\).
+
+Fix \(\lambda\in(0,1]\) with \(\Theta:=(a_1-\lambda)/(b+\sqrt{3\lambda})>1\),
+and take a fixed power of the lazy Gabber--Galil walk \cite{gg81} on \([n]\):
+a symmetric positive semidefinite transition matrix \(T\) of constant labeled
+degree \(D\) with \(\|T-J/n\|\le\lambda\). Let \(k=\lceil\log_2n\rceil\). A
+\emph{record} is a starting symbol together with \(k\) edge labels; it
+determines a walk \((v_0,\dots,v_k)\), and the uniform measure on the
+\(nD^k\) records is the stationary walk law (parallel transitions and loops
+counted with multiplicity). The output graph has a shore of \(nD^k\) records
+on each side, and two records are adjacent iff their walks are adjacent in
+the padded base graph at every position. There are \(N=2nD^k\le2(2D)^k\)
+vertices, enumerable in polynomial time.
+
+\emph{YES.} For a base shore set \(S\) of density \(\alpha\ge a_1\), let
+\(P_S\) be the diagonal projection onto \(S\). The fraction of records
+staying in \(S\) is \(n^{-1}\ind_S^{\top}(P_STP_S)^k\ind_S\). The compressed
+operator is positive semidefinite and its Rayleigh quotient at \(\ind_S\) is
+\(\ind_S^{\top}T\ind_S/|S|\ge\alpha-\lambda\); Jensen's inequality on the
+spectral measure of \(\ind_S\) gives a fraction at least
+\(\alpha(\alpha-\lambda)^k\). Records staying in the two shores of the YES
+biclique form a biclique, so after trimming the larger side there is a
+balanced biclique with shore density at least \(y=a_1(a_1-\lambda)^k\).
+
+\emph{NO.} Let \((\mathcal X,\mathcal Y)\) be a biclique of records and
+\(S_i,U_i\) the sets of position-\(i\) symbols on the two sides. Every pair in
+\(S_i\times U_i\) is a base edge (choose the witnessing records
+independently), so the densities satisfy \(\alpha_i\beta_i\le b^2\). Since
+\(\|P_{S_i}TP_{S_{i+1}}\|\le\|P_{S_i}(J/n)P_{S_{i+1}}\|+\lambda=
+\sqrt{\alpha_i\alpha_{i+1}}+\lambda\), the density of \(\mathcal X\) is at most
+\(n^{-1}\ind_{S_0}^{\top}P_{S_0}TP_{S_1}T\cdots TP_{S_k}\ind_{S_k}\le
+\sqrt{\alpha_0\alpha_k}\prod_{i<k}(\sqrt{\alpha_i\alpha_{i+1}}+\lambda)\), and
+likewise for \(\mathcal Y\). With \(u=\sqrt{\alpha_i\alpha_{i+1}}\) and
+\(v=\sqrt{\beta_i\beta_{i+1}}\) we have \(uv\le b^2\) and
+\((u+\lambda)(v+\lambda)\le b^2+2\lambda+\lambda^2\le(b+\sqrt{3\lambda})^2\).
+The endpoint factors are at most one, so the geometric mean of the two shore
+densities is at most \(z=(b+\sqrt{3\lambda})^k\); this covers unbalanced
+bicliques. (This estimate also follows from \cite[Proposition~22]{tz24}
+applied to \(T\otimes T\); see also \cite[Section~4]{gl04}.)
+
+The ratio is \(y/z=a_1\Theta^k\). For every fixed \(0<\gamma<\log\Theta/
+\log(2D)\), \(a_1\Theta^k>N^\gamma\) for all large \(n\) (a fixed lower bound
+on \(J\) ensures this). For Maximum Balanced Biclique, YES has value at least
+\(nD^ky\) and NO at most \(nD^kz\). For Maximum Edge Biclique, YES has a
+biclique with at least \((nD^ky)^2\) edges and every NO biclique has at most
+\((nD^kz)^2\); the ratio is squared.
+\end{proof}
+
+This proves Theorem~\ref{th:main}(C).
+
+\section{Dense subgraphs and cuts}\label{sec:dense}
+
+This section uses the constructions of Section~\ref{sec:sse}.
+
+\begin{lemma}[Window graphs of large degree]\label{lem:largedeg}
+Fix \(\delta,M,R\) as in Theorem~\ref{th:window}, and let \(a,b\) be the
+constants of its proof (\(a=2a_0\), \(b=b_0/2\)). For every fixed
+\(\theta\ge1\) there is a deterministic polynomial-time reduction from 3SAT
+to simple bipartite \(d\)-regular graphs on \(N\) vertices with
+\(d\ge\theta\sqrt N\) and \(N\ge\theta d\), \(\delta N\ge\theta^2\), with the
+YES and NO properties of Theorem~\ref{th:window} for these \(a,b\).
+\end{lemma}
+
+\begin{proof}
+Let \(P\) be as in Lemma~\ref{lem:chain}. Take \(s\ge\max\{m,\theta^2,s_0\}\)
+for a fixed \(s_0\), an integer \(L_0\) of order \(s^2\) and a prime
+\(q\in[sL_0,2sL_0]\). Round \(P\) to \((n_{ij}/L_0)\) as in
+Lemma~\ref{lem:degree}, and build \(\Gamma\) directly: each left and right
+class is a copy of \(\F_q^2\), and left class \(i\) is joined to right class
+\(j\) by \(A_{T_{ij}}\) with \(n_{ij}\le L_0\le q\) distinct values. It is
+simple, bipartite and \(d\)-regular with \(d=L_0q\), and \(N=2mq^2\). The
+estimate of Lemma~\ref{lem:degree}, with the port step omitted, gives the
+error \(\xi=q^{-1/2}+2m/L_0\to0\); for \(s_0\) large, \(\xi\le a_0/2\), and
+the proof of Theorem~\ref{th:window} applies. Moreover
+\(d/\sqrt N=L_0/\sqrt{2m}\) and \(N/d=2mq/L_0\ge2ms\), both at least
+\(\theta\) for \(s_0\) large, and \(\delta N\ge\theta^2\).
+\end{proof}
+
+In a \(d\)-regular graph,
+\begin{equation}\label{eq:edges}
+e(S)=\tfrac12d|S|\bigl(1-\Phi(S)\bigr).
+\end{equation}
+
+\begin{theorem}[Densest \(k\)-Subgraph]\label{th:dks}
+Let \(a,b\) be as in Theorem~\ref{th:window} for some fixed window. Maximizing
+\(e(S)\) over \(|S|=k\) is NP-hard to approximate within any fixed factor
+below \((1-a)/(1-b)\) on fixed-degree simple bipartite graphs, also when
+\(S\) must contain exactly \(k/2\) vertices of each shore.
+\end{theorem}
+
+\begin{proof}
+Use the graphs of Theorem~\ref{th:window} with \(k=\delta N\). By
+\eqref{eq:edges}, YES has a \(k\)-set with \(e(S)\ge\frac12dk(1-a)\), taking
+\(k/2\) vertices from each shore; in NO every \(k\)-set has
+\(e(S)\le\frac12dk(1-b)\).
+\end{proof}
+
+\begin{theorem}[Densest At-Least-\(k\)-Subgraph]\label{th:dalks}
+Let \(M\ge2\) and \(a,b\) be as in Theorem~\ref{th:window}. Maximizing
+\(e(S)/|S|\) over \(|S|\ge k\) is NP-hard to approximate within any fixed
+factor below \(1+(b-a)/(1+b/(M-1))\) on simple unweighted graphs.
+\end{theorem}
+
+\begin{proof}
+Use Lemma~\ref{lem:largedeg} with a large fixed \(\theta\), and let
+\(k=\delta N\). Put \(t=bM/(M-1)\), let \(r\) be the largest integer with
+\(\binom r2\le tdk/2\), and add a disjoint clique on \(r\) vertices; it has
+\(tdk/2-O(r)\) edges and \(r=O(\sqrt{dk})\), so \(r/k=O(\sqrt{d/k})\to0\) as
+\(\theta\to\infty\) (since \(d/k\le1/(\delta\theta)\)). Set the new size bound
+to \(k+r\). In units of \(d/2\), the YES witness together with the clique
+has density at least \((1-a+t)\frac{k}{k+r}-O(r/(dk))\). A NO solution
+contains \(u\ge k\) old vertices. If \(u\le Mk\), by \eqref{eq:edges} and the
+window its density is at most \((u(1-b)+tk)/u\le1-b+t\); if \(u>Mk\),
+regularity gives at most \((u+tk)/u\le1+t/M\). The two bounds agree, and
+\[
+\frac{1-a+t}{1+t/M}=1+\frac{b-a}{1+b/(M-1)} .
+\]
+A fixed factor strictly below this value absorbs the \(O(r/k)\) losses for
+\(\theta\) large.
+\end{proof}
+
+\begin{theorem}[Minimum \(k\)-Cut]\label{th:kcut}
+Let \(a,b\) be as in Theorem~\ref{th:window} with \(M\ge2\). Minimizing the
+number of edges between the parts of a partition into \(k\) nonempty parts
+(\(k\) part of the input) is NP-hard to approximate within any fixed factor
+below \((1+b)/(1+a)\) on connected simple unweighted graphs.
+\end{theorem}
+
+\begin{proof}
+Use Lemma~\ref{lem:largedeg} with a large fixed \(\theta\), let
+\(k=\delta N\), and ask for \(k+1\) parts. In YES, making each vertex of the
+YES set a singleton part and the rest one part costs
+\(dk-e(S)\le\frac12(1+a)dk\). In NO, let \(r=\lceil\sqrt N\rceil\) and sort
+the parts by size, \(|C_1|\le\dots\le|C_{k+1}|\). Take the longest initial
+segment \(C_1,\dots,C_j\) with \(j\le k-r\) parts and at most \(k\) vertices,
+and let \(U\) be its union. At least \(r+1\) parts follow \(C_j\), so
+\((r+1)|C_j|\le N\) and every selected part has fewer than \(r\) vertices.
+If \(j=k-r\), then \(|U|\ge k-r\). Otherwise adding \(C_{j+1}\) would exceed
+\(k\) vertices, and \(C_{j+1}\) is followed by at least \(r+1\) parts, so
+\(|C_{j+1}|<r\) and \(|U|>k-r\). Thus \(k-r\le|U|\le k\), within the window
+for large \(N\). Edges leaving \(U\) and edges inside \(U\) between distinct
+selected parts all cross the partition, so the cost is at least
+\[
+d|U|-e(U)-\sum_{j'\le j}e(C_{j'})\ \ge\ d|U|-\tfrac12d|U|(1-b)-\tfrac12r|U|
+=\tfrac12\bigl(d(1+b)-r\bigr)|U|,
+\]
+using \eqref{eq:edges} for \(U\) and \(e(C)\le|C|r/2\). As \(r/d\le
+1/\theta+1/\sqrt N\) and \(r/k\to0\), the ratio tends to \((1+b)/(1+a)\) for
+large \(\theta\). To make the graph connected, add at most \(N-1\) edges
+joining its components. This adds at most \(N-1\) to the YES cost, a
+vanishing fraction of \(dk\) since \(N/(dk)=1/(\delta d)\le1/(\delta\theta)\),
+and adding edges cannot decrease the cost of any partition.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{th:main}(D)]
+Fix one window (say \(\delta=1/8\), \(M=2\), \(R=2\)) with its constants
+\(a<b\), and take \(\eps_0>0\) strictly below the three margins
+\((1-a)/(1-b)-1\), \((b-a)/(1+b/(M-1))\) and \((b-a)/(1+a)\) of
+Theorems~\ref{th:dks}--\ref{th:kcut}.
+\end{proof}
+
+\section{Open problems}\label{sec:open}
+
+\paragraph{Full small-set expansion.}
+Theorem~\ref{th:gapsse} has one threshold \(\eta(\delta)\) close to \(1/2\);
+the SSE hypothesis \cite{rs10} asks for every small \(\eta\). The
+random-walk amplification of Raghavendra and Schramm \cite{rsch14} needs
+soundness asymptotically larger than the square root of the completeness,
+on an enlarged range of sizes. Our normalization gives
+\(b_0^2/a_0=B^2\delta/(128A_KH)\), which diverges only if \(H=o(B^2)\), while
+Lemma~\ref{lem:chain} uses \(H\ge2B\) and \(H\) of the order of the total
+capacity. A rounding argument based on Trevisan's product-demand Cheeger
+approximation \cite{tre13} suggests a barrier: a reduction that keeps a
+partition of the YES demand into classes of small mass with bounded crossing
+capacity \(A\), and imposes \(c(\partial S)\ge B\mu(S)(1-\mu(S))\) on a fixed
+size window, needs total capacity \(\Omega(B^2/A)\) unless
+\(\mathrm P=\mathrm{NP}\). (We do not include the proof here.) Full SSE by
+this route would therefore need a different completeness promise.
+
+\paragraph{The near-half biclique promise.}
+Manurangsi's SSE-based base gap \cite{man18} has YES bicliques of density near
+\(1/2\) and NO bicliques of arbitrarily small density. Lemma~\ref{lem:basegap}
+gives only fixed \(b<a\), and the product of Section~\ref{sec:biclique}
+decreases the YES density. A symmetric ``OR'' product does not help either.
+Declare two \(r\)-tuples compatible if every bijection between their
+positions pairs some compatible base symbols. Consider a conflict graph on
+three cliques \(C,T,D\) of masses \(p\), \(vp\), \(1-(1+v)p\), with \(T\)
+adjacent to everything and no conflicts between \(C\) and \(D\). Every base
+biclique has one shore of mass at most \(p\) and omits mass at least \(vp\).
+In the product, the tuples with some entry in \(C\) and the tuples entirely
+in \(D\) form a biclique of densities \(1-(1-p)^r\) and \((1-(1+v)p)^r\),
+which tend to \(1/2\) and \(2^{-(1+v)}\) for \(p=(\log2)/r\).
+
+\paragraph{\(2-\eps\) for precedence-constrained scheduling.}
+The near-two lower bounds for precedence-constrained scheduling of Svensson
+\cite{sve11} and of Bazzi and Norouzi-Fard \cite{bnf15} rely on the near-half
+biclique promise or a related availability promise, and remain open from
+Theorem~U. Likewise, the \(2-\eps\) bounds for Minimum \(k\)-Cut and Densest
+At-Least-\(k\)-Subgraph \cite{man18} need conductance parameters stronger
+than those of Theorem~\ref{th:window}.
+
+\section*{Use of AI}
+The proof presented in this paper was developed through an interactive
+dialogue with GPT-6.2 Astra (OpenAI) and Claude Opus 5.5 (Anthropic).
+The author used them to explore multiple possible proof strategies and
+directions, and the AI generated the initial draft under the author's
+guidance. The author then critically examined the generated proof,
+verified each step for correctness and rigor, and revised it where
+necessary. The author takes full responsibility for the final content.
+
+\begin{thebibliography}{99}
+
+\bibitem{afwz95}
+N.~Alon, U.~Feige, A.~Wigderson, and D.~Zuckerman.
+\href{https://www.math.ias.edu/avi/node/790}{Derandomized graph products}.
+\emph{Comput. Complexity} 5 (1995), 60--75.
+
+\bibitem{ams11}
+C.~Amb\"uhl, M.~Mastrolilli, and O.~Svensson.
+\href{https://theory.epfl.ch/osven/Ola%20Svensson_publications/SICOMP11a.pdf}{Inapproximability results for maximum edge biclique, minimum linear arrangement, and sparsest cut}.
+\emph{SIAM J. Comput.} 40 (2011), 567--596.
+
+\bibitem{ar06}
+K.~Andreev and H.~R\"acke.
+\href{https://www.cs.cmu.edu/~harry/pdf/bpartition.pdf}{Balanced graph partitioning}.
+\emph{Theory Comput. Syst.} 39 (2006), 929--939.
+
+\bibitem{apw12}
+P.~Austrin, T.~Pitassi, and Y.~Wu.
+\href{https://arxiv.org/abs/1109.4910}{Inapproximability of treewidth, one-shot pebbling, and related layout problems}.
+APPROX 2012; arXiv:1109.4910.
+
+\bibitem{bfk14}
+N.~Bansal, U.~Feige, R.~Krauthgamer, K.~Makarychev, V.~Nagarajan, J.~Naor, and R.~Schwartz.
+\href{https://doi.org/10.1137/120873996}{Min-max graph partitioning and small set expansion}.
+\emph{SIAM J. Comput.} 43 (2014), 872--904.
+
+\bibitem{bnf15}
+A.~Bazzi and A.~Norouzi-Fard.
+\href{https://arxiv.org/abs/1507.01906}{Towards tight lower bounds for scheduling problems}.
+ESA 2015; arXiv:1507.01906.
+
+\bibitem{bccfv10}
+A.~Bhaskara, M.~Charikar, E.~Chlamt\'a\v{c}, U.~Feige, and A.~Vijayaraghavan.
+\href{https://users.cs.northwestern.edu/~aravindv/DkS.pdf}{Detecting high log-densities: an \(O(n^{1/4})\) approximation for densest \(k\)-subgraph}.
+STOC 2010, 201--210.
+
+\bibitem{bhangale16}
+A.~Bhangale, R.~Gandhi, M.~T.~Hajiaghayi, R.~Khandekar, and G.~Kortsarz.
+\href{https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ICALP.2016.6}{Bicovering: covering edges with two small subsets of vertices}.
+ICALP 2016, LIPIcs 55, article 6.
+
+\bibitem{bon}
+\'E.~Bonnet.
+\href{https://arxiv.org/abs/2406.11628}{Treewidth inapproximability and tight ETH lower bound}.
+arXiv:2406.11628 (17 June 2024); STOC 2025;
+\emph{J. ACM} (2026), \href{https://doi.org/10.1145/3833387}{doi:10.1145/3833387}.
+
+\bibitem{bns25}
+\'E.~Bonnet, D.~Neuen, and M.~Soko\l{}owski.
+\href{https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.IPEC.2025.17}{Treedepth inapproximability and exponential ETH lower bound}.
+IPEC 2025, LIPIcs 358, article 17; arXiv:2507.13818.
+
+\bibitem{bmpy}
+N.~Brettell, A.~Munaro, D.~Paulusma, and S.~Yang.
+\href{https://arxiv.org/abs/2308.05817}{Comparing width parameters on graph classes}.
+\emph{European J. Combin.} (2025), \href{https://doi.org/10.1016/j.ejc.2025.104163}{doi:10.1016/j.ejc.2025.104163}; arXiv:2308.05817.
+
+\bibitem{cs17}
+Y.~Cao and R.~B.~Sandeep.
+\href{https://arxiv.org/abs/1606.08141}{Minimum fill-in: inapproximability and almost tight lower bounds}.
+SODA 2017; arXiv:1606.08141.
+
+\bibitem{dfgkm22}
+C.~Dallard, F.~V.~Fomin, P.~A.~Golovach, T.~Korhonen, and M.~Milani\v{c}.
+\href{https://arxiv.org/abs/2207.09993}{Computing tree decompositions with small independence number}.
+arXiv:2207.09993.
+
+\bibitem{dms21}
+C.~Dallard, M.~Milani\v{c}, and K.~\v{S}torgel.
+\href{https://arxiv.org/abs/2111.04543}{Treewidth versus clique number. III. Tree-independence number of graphs with a forbidden structure}.
+arXiv:2111.04543.
+
+\bibitem{es81}
+B.~Efron and C.~Stein.
+The jackknife estimate of variance.
+\emph{Ann. Statist.} 9 (1981), 586--596.
+
+\bibitem{fei02}
+U.~Feige.
+\href{https://doi.org/10.1145/509907.509985}{Relations between average case complexity and approximation complexity}.
+STOC 2002, 534--543.
+
+\bibitem{fk04}
+U.~Feige and S.~Kogan.
+\href{https://www.wisdom.weizmann.ac.il/~feige/TechnicalReports/FeigeKogan.pdf}{Hardness of approximation of the balanced complete bipartite subgraph problem}.
+Technical report, Weizmann Institute, May 2004.
+
+\bibitem{gg81}
+O.~Gabber and Z.~Galil.
+\href{https://doi.org/10.1016/0022-0000(81)90040-4}{Explicit constructions of linear-sized superconcentrators}.
+\emph{J. Comput. System Sci.} 22 (1981), 407--420.
+
+\bibitem{gl22}
+S.~Ghoshal and E.~Lee.
+\href{https://arxiv.org/abs/2201.04617}{A characterization of approximability for biased CSPs}.
+arXiv:2201.04617.
+
+\bibitem{gl04}
+A.~Goerdt and A.~Lanka.
+\href{https://eccc.weizmann.ac.il/report/2004/048/}{An approximation hardness result for bipartite clique}.
+ECCC TR04-048, 2004.
+
+\bibitem{gw07}
+F.~Gurski and E.~Wanke.
+\href{https://www.sciencedirect.com/science/article/pii/S0012365X07000684}{Line graphs of bounded clique-width}.
+\emph{Discrete Math.} 307 (2007), 2734--2754.
+
+\bibitem{icalp25}
+B.~Bergougnoux, \'E.~Bonnet, and J.~Duron.
+\href{https://doi.org/10.4230/LIPIcs.ICALP.2025.25}{Mim-width is paraNP-complete}.
+ICALP 2025, LIPIcs 334, article 25.
+
+\bibitem{icalp26}
+M.~Dupr\'e la Tour, M.~Lafond, and N.~Ndiaye.
+\href{https://doi.org/10.4230/LIPIcs.ICALP.2026.83}{On the hardness of recognizing graphs of small mim-width and its variants}.
+ICALP 2026, LIPIcs 374, article 83; arXiv:2512.06186.
+
+\bibitem{jst15}
+L.~Jeong, S.~H.~S\ae{}ther, and J.~A.~Telle.
+\href{https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.IPEC.2015.212}{Maximum matching width: new characterizations and a fast algorithm for dominating set}.
+IPEC 2015; arXiv:1507.02384.
+
+\bibitem{joh98}
+\"O.~Johansson.
+Clique-decomposition, NLC-decomposition, and modular decomposition---relationships and results for random graphs.
+\emph{Congr. Numer.} 132 (1998), 39--60.
+
+\bibitem{kho06}
+S.~Khot.
+\href{https://doi.org/10.1137/S0097539705447037}{Ruling out PTAS for graph min-bisection, dense \(k\)-subgraph, and bipartite clique}.
+\emph{SIAM J. Comput.} 36 (2006), 1025--1071; FOCS 2004.
+
+\bibitem{kin92}
+N.~G.~Kinnersley.
+The vertex separation number of a graph equals its path-width.
+\emph{Inform. Process. Lett.} 42 (1992), 345--350.
+
+\bibitem{lmt26}
+B.~Laekhanukit, P.~Manurangsi, and O.~Trabelsi.
+A note on approximability of densest at-least-\(k\)-subgraph.
+\emph{Theoret. Comput. Sci.} (2026), article 116209,
+\href{https://doi.org/10.1016/j.tcs.2026.116209}{doi:10.1016/j.tcs.2026.116209};
+\href{https://arxiv.org/abs/2605.25464}{arXiv:2605.25464}.
+
+\bibitem{man17}
+P.~Manurangsi.
+\href{https://arxiv.org/abs/1611.05991}{Almost-polynomial ratio ETH-hardness of approximating densest \(k\)-subgraph}.
+STOC 2017; revised version \href{https://eccc.weizmann.ac.il/report/2016/195/}{ECCC TR16-195} (October 2026).
+
+\bibitem{man17icalp}
+P.~Manurangsi.
+\href{https://doi.org/10.4230/LIPIcs.ICALP.2017.79}{Inapproximability of maximum edge biclique, maximum balanced biclique and minimum \(k\)-cut from the small set expansion hypothesis}.
+ICALP 2017, LIPIcs 80, article 79.
+
+\bibitem{man18}
+P.~Manurangsi.
+\href{https://www.mdpi.com/1999-4893/11/1/10}{Inapproximability of maximum biclique problems, minimum \(k\)-cut and densest at-least-\(k\)-subgraph from the small set expansion hypothesis}.
+\emph{Algorithms} 11 (2018), article 10; arXiv:1705.03581.
+
+\bibitem{man26}
+P.~Manurangsi.
+Improved approximation algorithm for maximum balanced biclique.
+APPROX/RANDOM 2026, LIPIcs 392, article 1,
+\href{https://doi.org/10.4230/LIPIcs.APPROX/RANDOM.2026.1}{doi:10.4230/LIPIcs.APPROX/RANDOM.2026.1}; arXiv:2604.27141.
+
+\bibitem{oai26}
+OpenAI.
+Constant-factor hardness of uniform sparsest cut.
+Preprint, 24 September 2026. \url{https://github.com/openai/math}.
+
+\bibitem{oailean}
+OpenAI.
+Lean formalization scope for the uniform sparsest cut release.
+\url{https://github.com/openai/math/blob/main/lean/docs/117.md}.
+
+\bibitem{pee03}
+R.~Peeters.
+\href{https://doi.org/10.1016/S0166-218X(03)00333-0}{The maximum edge biclique problem is NP-complete}.
+\emph{Discrete Appl. Math.} 131 (2003), 651--654.
+
+\bibitem{rsch14}
+P.~Raghavendra and T.~Schramm.
+\href{https://doi.org/10.4230/LIPIcs.APPROX-RANDOM.2014.381}{Gap amplification for small-set expansion via random walks}.
+APPROX/RANDOM 2014, LIPIcs 28, 381--391; arXiv:1310.1493.
+
+\bibitem{rs10}
+P.~Raghavendra and D.~Steurer.
+\href{https://www.dsteurer.org/paper/expansion/}{Graph expansion and the unique games conjecture}.
+STOC 2010, 755--764.
+
+\bibitem{rst12}
+P.~Raghavendra, D.~Steurer, and M.~Tulsiani.
+\href{https://arxiv.org/abs/1011.2586}{Reductions between expansion problems}.
+CCC 2012, 64--73; arXiv:1011.2586.
+
+\bibitem{rvw02}
+O.~Reingold, S.~Vadhan, and A.~Wigderson.
+\href{https://arxiv.org/abs/math/0406038}{Entropy waves, the zig-zag graph product, and new constant-degree expanders}.
+\emph{Ann. of Math.} 155 (2002), 157--187.
+
+\bibitem{rs91}
+N.~Robertson and P.~D.~Seymour.
+Graph minors. X. Obstructions to tree-decomposition.
+\emph{J. Combin. Theory Ser. B} 52 (1991), 153--190.
+
+\bibitem{sv16}
+S.~H.~S\ae{}ther and M.~Vatshelle.
+\href{https://doi.org/10.1016/j.tcs.2015.11.039}{Hardness of computing width parameters based on branch decompositions over the vertex set}.
+\emph{Theoret. Comput. Sci.} 615 (2016), 120--125.
+
+\bibitem{sv95}
+H.~Saran and V.~V.~Vazirani.
+\href{https://ics.uci.edu/~vazirani/k-cut.pdf}{Finding \(k\) cuts within twice the optimal}.
+\emph{SIAM J. Comput.} 24 (1995), 101--108.
+
+\bibitem{sve11}
+O.~Svensson.
+\href{https://theory.epfl.ch/osven/Ola%20Svensson_publications/SICOMP11b.pdf}{Hardness of precedence constrained scheduling on identical machines}.
+\emph{SIAM J. Comput.} 40 (2011), 1258--1274.
+
+\bibitem{tz24}
+A.~Ta-Shma and R.~Zadicario.
+The expander hitting property when the sets are arbitrarily unbalanced.
+APPROX/RANDOM 2024, LIPIcs 317, article 31,
+\href{https://drops.dagstuhl.de/storage/00lipics/lipics-vol317-approx-random2024/LIPIcs.APPROX-RANDOM.2024.31/LIPIcs.APPROX-RANDOM.2024.31.pdf}{LIPIcs.APPROX-RANDOM.2024.31}; ECCC TR24-118.
+
+\bibitem{tre13}
+L.~Trevisan.
+\href{https://arxiv.org/abs/1303.2730}{Is Cheeger-type approximation possible for nonuniform sparsest cut?}
+arXiv:1303.2730.
+
+\bibitem{vat12}
+M.~Vatshelle.
+New width parameters of graphs.
+PhD thesis, University of Bergen, 2012.
+
+\bibitem{wapl14}
+Y.~Wu, P.~Austrin, T.~Pitassi, and D.~Liu.
+\href{https://doi.org/10.1613/jair.4030}{Inapproximability of treewidth and related problems}.
+\emph{J. Artificial Intelligence Res.} 49 (2014), 569--600.
+
+\bibitem{wapl15}
+Y.~Wu, P.~Austrin, T.~Pitassi, and D.~Liu.
+\href{https://ijcai.org/proceedings/2015/600}{Inapproximability of treewidth and related problems (extended abstract)}.
+IJCAI 2015, journal track.
+
+\bibitem{yam18}
+K.~Yamazaki.
+\href{https://www.mdpi.com/1999-4893/11/11/173}{Inapproximability of rank, clique, Boolean, and maximum induced matching-widths under small set expansion hypothesis}.
+\emph{Algorithms} 11 (2018), article 173.
+
+\bibitem{zuc07}
+D.~Zuckerman.
+Linear degree extractors and the inapproximability of max clique and chromatic number.
+\emph{Theory Comput.} 3 (2007), 103--128.
+
+\end{thebibliography}
+
+\end{document}
